@@ -2,29 +2,42 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
-import { TextField, Button, Table, TableHead, TableBody, TableRow, TableCell } from "@mui/material";
+import { TextField, Button, Table, TableHead, TableBody, TableRow, TableCell, Select, MenuItem, Checkbox, ListItemText } from "@mui/material";
 
 const Users = () => {
   const [users, setUsers] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [selectedGroups, setSelectedGroups] = useState([]);
   const [groupInput, setGroupInput] = useState("");
 
   const navigate = useNavigate();
 
-  const fetchUsers = async () => {
-    const response = await axios.get("http://localhost:8080/users");
+  const retrieveUsers = async () => {
+    const response = await axios.get("http://localhost:8080/api/retrieveUsers");
     setUsers(response.data.users);
   };
 
+  const retrieveGroups = async () => {
+    const response = await axios.get("http://localhost:8080/api/retrieveGroups");
+    const groupsArray = response.data.groups.map(group => group.groupName);
+    setGroups(groupsArray);
+  };
+
   useEffect(() => {
-    fetchUsers();
+    retrieveUsers();
+    retrieveGroups();
   }, []);
 
+  const handleGroupSelectChange = (event) => {
+    setSelectedGroups(event.target.value);
+  };
+
   const handleGroupInputChange = (event) => {
-      setGroupInput(event.target.value);
+    setGroupInput(event.target.value);
   };
 
   const createGroup = async () => {
-    const response = await axios.post("http://localhost:8080/createGroup", { groupName: groupInput });
+    const response = await axios.post("http://localhost:8080/api/createGroup", { groupName: groupInput });
     
     if (response.data.status === 200) {
         navigate("/users");
@@ -58,7 +71,22 @@ const Users = () => {
                 <TableCell>{user.username}</TableCell>
                 <TableCell></TableCell>
                 <TableCell>{user.email}</TableCell>
-                <TableCell></TableCell>
+                <TableCell>
+                  <Select
+                      multiple
+                      value={selectedGroups}
+                      onChange={handleGroupSelectChange}
+                      renderValue={(selected) => selected.join(", ")}
+                      style={{ width: "150px" }}
+                  >
+                    {groups.map((group) => (
+                      <MenuItem key={group} value={group}>
+                        <Checkbox checked={selectedGroups.includes(group)} />
+                        <ListItemText primary={group} />
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </TableCell>
                 <TableCell>{user.enabled === 1 ? "Enabled" : "Disabled"}</TableCell>
                 <TableCell></TableCell>
               </TableRow>
