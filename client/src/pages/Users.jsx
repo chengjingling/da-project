@@ -1,29 +1,44 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
-import Table from "@mui/material/Table";
-import TableHead from "@mui/material/TableHead";
-import TableBody from "@mui/material/TableBody";
-import TableRow from "@mui/material/TableRow";
-import TableCell from "@mui/material/TableCell";
+import { TextField, Button, Table, TableHead, TableBody, TableRow, TableCell } from "@mui/material";
 
 const Users = () => {
   const [users, setUsers] = useState([]);
+  const [groupInput, setGroupInput] = useState("");
+
+  const navigate = useNavigate();
 
   const fetchUsers = async () => {
     const response = await axios.get("http://localhost:8080/users");
     setUsers(response.data.users);
-    console.log(response.data.users);
   };
 
   useEffect(() => {
     fetchUsers();
   }, []);
 
+  const handleGroupInputChange = (event) => {
+      setGroupInput(event.target.value);
+  };
+
+  const createGroup = async () => {
+    const response = await axios.post("http://localhost:8080/createGroup", { groupName: groupInput });
+    
+    if (response.data.status === 200) {
+        navigate("/users");
+    }
+  };
+
   return (
     <div>
       <Header />
 
+      Group name:
+      <TextField value={groupInput} onChange={handleGroupInputChange} />
+      <Button onClick={createGroup}>Create</Button>
+        
       <Table>
         <TableHead>
           <TableRow>
