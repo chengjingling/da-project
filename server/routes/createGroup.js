@@ -10,10 +10,10 @@ router.post("/createGroup", (req, res) => {
         if (err) {
             console.error("Error inserting user-group:", err);
             return;
+        } else {
+            console.log("User-group inserted successfully!");
+            res.json({ status: 200 });
         }
-        
-        console.log("User-group inserted successfully!");
-        res.json({ status: 200 });
    });
 });
 

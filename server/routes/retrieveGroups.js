@@ -7,10 +7,10 @@ router.get("/retrieveGroups", (req, res) => {
         if (err) {
             console.error("Error selecting groups:", err);
             return;
+        } else {
+            console.log("Groups:", groups);
+            res.json({ groups: groups });
         }
-    
-        console.log("Groups:", groups);
-        res.json({ groups: groups });
     });
 });
 

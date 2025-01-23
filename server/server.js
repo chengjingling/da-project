@@ -10,6 +10,9 @@ app.use(cors(corsOptions));
 
 const connection = require("./config/database");
 
+const authenticateUser = require("./routes/authenticateUser");
+app.use("/api", authenticateUser);
+
 const retrieveUsers = require("./routes/retrieveUsers");
 app.use("/api", retrieveUsers);
 

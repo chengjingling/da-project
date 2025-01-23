@@ -7,10 +7,10 @@ router.get("/retrieveUsers", (req, res) => {
         if (err) {
             console.error("Error selecting users:", err);
             return;
+        } else {
+            console.log("Users:", users);
+            res.json({ users: users });
         }
-    
-        console.log("Users:", users);
-        res.json({ users: users });
     });
 });
 
