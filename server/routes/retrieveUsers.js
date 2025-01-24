@@ -2,14 +2,13 @@ const express = require("express");
 const router = express.Router();
 const connection = require("../config/database");
 
+
 router.get("/retrieveUsers", (req, res) => {
     connection.query("SELECT * FROM users", (err, users) => {
         if (err) {
-            console.error("Error selecting users:", err);
-            return;
+            res.status(500);
         } else {
-            console.log("Users:", users);
-            res.json({ users: users });
+            res.status(200).json({ users: users });
         }
     });
 });

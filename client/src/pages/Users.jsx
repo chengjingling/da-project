@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import { TextField, Button, Table, TableHead, TableBody, TableRow, TableCell, Select, MenuItem, Checkbox, ListItemText } from "@mui/material";
 
@@ -9,16 +8,15 @@ const Users = () => {
   const [groups, setGroups] = useState([]);
   const [selectedGroups, setSelectedGroups] = useState([]);
   const [groupInput, setGroupInput] = useState("");
-
-  const navigate = useNavigate();
+  const [createGroupErrorMessage, setCreateGroupErrorMessage] = useState("");
 
   const retrieveUsers = async () => {
-    const response = await axios.get("http://localhost:8080/api/retrieveUsers");
+    const response = await axios.get("http://localhost:8080/api/retrieveUsers", { withCredentials: true });
     setUsers(response.data.users);
   };
 
   const retrieveGroups = async () => {
-    const response = await axios.get("http://localhost:8080/api/retrieveGroups");
+    const response = await axios.get("http://localhost:8080/api/retrieveGroups", { withCredentials: true });
     const groupsArray = response.data.groups.map(group => group.groupName);
     setGroups(groupsArray);
   };
@@ -37,10 +35,13 @@ const Users = () => {
   };
 
   const createGroup = async () => {
-    const response = await axios.post("http://localhost:8080/api/createGroup", { groupName: groupInput });
-    
-    if (response.data.status === 200) {
-        navigate("/users");
+    try {
+      const response = await axios.post("http://localhost:8080/api/createGroup", { groupName: groupInput }, { withCredentials: true });
+      setGroups((prevGroups) => [...prevGroups, groupInput].sort());
+      setGroupInput("");
+      setCreateGroupErrorMessage("");
+    } catch (error) {
+      setCreateGroupErrorMessage("Group already exists.");
     }
   };
 
@@ -50,6 +51,7 @@ const Users = () => {
 
       Group name:
       <TextField value={groupInput} onChange={handleGroupInputChange} />
+      {createGroupErrorMessage}
       <Button onClick={createGroup}>Create</Button>
         
       <Table>

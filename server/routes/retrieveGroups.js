@@ -5,11 +5,9 @@ const connection = require("../config/database");
 router.get("/retrieveGroups", (req, res) => {
     connection.query("SELECT DISTINCT groupName FROM user_group", (err, groups) => {
         if (err) {
-            console.error("Error selecting groups:", err);
-            return;
+            res.status(500);
         } else {
-            console.log("Groups:", groups);
-            res.json({ groups: groups });
+            res.status(200).json({ groups: groups });
         }
     });
 });

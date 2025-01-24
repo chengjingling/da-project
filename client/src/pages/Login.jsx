@@ -20,12 +20,11 @@ const Login = () => {
   };
 
   const login = async () => {
-    const response = await axios.post("http://localhost:8080/api/authenticateUser", { username: username, password: password });
-    
-    if (response.data.status === 200) {
+    try {
+      const response = await axios.post("http://localhost:8080/api/authenticateUser", { username: username, password: password }, { withCredentials: true });
       navigate("/users");
-    } else {
-      setErrorMessage("Username or password is incorrect.");
+    } catch (error) {
+      setErrorMessage(error.response.data.message);
     }
   };
 
