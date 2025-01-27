@@ -6,17 +6,17 @@ import { TextField, Button, Table, TableHead, TableBody, TableRow, TableCell, Se
 const Users = () => {
   const [users, setUsers] = useState([]);
   const [groups, setGroups] = useState([]);
-  const [selectedGroups, setSelectedGroups] = useState([]);
   const [groupInput, setGroupInput] = useState("");
   const [createGroupErrorMessage, setCreateGroupErrorMessage] = useState("");
 
   const retrieveUsers = async () => {
-    const response = await axios.get("http://localhost:8080/api/retrieveUsers", { withCredentials: true });
-    setUsers(response.data.users);
+    const response = await axios.get("http://localhost:8080/api/retrieveUsers");
+    const usersArray = response.data.users.map(user => ({ ...user, selectedGroups: [] }));
+    setUsers(usersArray);
   };
 
   const retrieveGroups = async () => {
-    const response = await axios.get("http://localhost:8080/api/retrieveGroups", { withCredentials: true });
+    const response = await axios.get("http://localhost:8080/api/retrieveGroups");
     const groupsArray = response.data.groups.map(group => group.groupName);
     setGroups(groupsArray);
   };
@@ -26,8 +26,10 @@ const Users = () => {
     retrieveGroups();
   }, []);
 
-  const handleGroupSelectChange = (event) => {
-    setSelectedGroups(event.target.value);
+  const handleGroupSelectChange = (index, event) => {
+    const newUsers = [...users];
+    newUsers[index].selectedGroups = event.target.value;
+    setUsers(newUsers);
   };
 
   const handleGroupInputChange = (event) => {
@@ -36,7 +38,7 @@ const Users = () => {
 
   const createGroup = async () => {
     try {
-      const response = await axios.post("http://localhost:8080/api/createGroup", { groupName: groupInput }, { withCredentials: true });
+      const response = await axios.post("http://localhost:8080/api/createGroup", { groupName: groupInput });
       setGroups((prevGroups) => [...prevGroups, groupInput].sort());
       setGroupInput("");
       setCreateGroupErrorMessage("");
@@ -46,13 +48,23 @@ const Users = () => {
   };
 
   return (
-    <div>
+    <div style={{ paddingTop: 80 }}>
       <Header />
 
-      Group name:
-      <TextField value={groupInput} onChange={handleGroupInputChange} />
-      {createGroupErrorMessage}
-      <Button onClick={createGroup}>Create</Button>
+      <table style={{ marginLeft: "auto" }}>
+        <tbody>
+          <tr>
+            <td>Group name:</td>
+            <td><TextField value={groupInput} onChange={handleGroupInputChange} /></td>
+            <td><Button onClick={createGroup}>Create</Button></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td style={{ color: "#ff0000" }}>{createGroupErrorMessage}</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
         
       <Table>
         <TableHead>
@@ -76,14 +88,14 @@ const Users = () => {
                 <TableCell>
                   <Select
                       multiple
-                      value={selectedGroups}
-                      onChange={handleGroupSelectChange}
+                      value={user.selectedGroups}
+                      onChange={(event) => handleGroupSelectChange(index, event)}
                       renderValue={(selected) => selected.join(", ")}
                       style={{ width: "150px" }}
                   >
                     {groups.map((group) => (
                       <MenuItem key={group} value={group}>
-                        <Checkbox checked={selectedGroups.includes(group)} />
+                        <Checkbox checked={user.selectedGroups.includes(group)} />
                         <ListItemText primary={group} />
                       </MenuItem>
                     ))}

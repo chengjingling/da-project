@@ -15,19 +15,25 @@ app.use(cookieParser());
 const connection = require("./config/database");
 
 const { validateToken } = require("./middleware/validateToken");
-const { checkGroup } = require("./middleware/checkGroup");
+const { i_checkGroup } = require("./middleware/checkGroup");
 
 const authenticateUser = require("./routes/authenticateUser");
 app.use("/api", authenticateUser);
 
+const logout = require("./routes/logout");
+app.use("/api", validateToken, logout);
+
+const retrieveUserGroups = require("./routes/retrieveUserGroups");
+app.use("/api", validateToken, retrieveUserGroups);
+
 const retrieveUsers = require("./routes/retrieveUsers");
-app.use("/api", validateToken, checkGroup, retrieveUsers);
+app.use("/api", validateToken, i_checkGroup, retrieveUsers);
 
 const retrieveGroups = require("./routes/retrieveGroups");
-app.use("/api", validateToken, checkGroup, retrieveGroups);
+app.use("/api", validateToken, i_checkGroup, retrieveGroups);
 
 const createGroup = require("./routes/createGroup");
-app.use("/api", validateToken, checkGroup, createGroup);
+app.use("/api", validateToken, i_checkGroup, createGroup);
 
 app.listen(8080, () => {
     console.log("Server started on port 8080");

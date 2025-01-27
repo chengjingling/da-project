@@ -7,6 +7,18 @@ const dotenv = require("dotenv").config();
 
 router.post("/authenticateUser", async (req, res) => {
     const { username, password } = req.body;
+    let group;
+
+    connection.query("SELECT * FROM user_group WHERE username = ? AND groupName = 'admin'", [username], async (err, result) => {
+        if (err) {
+            console.error("Error selecting user group:", err);
+            res.status(500);
+        } else if (result.length === 0) {
+            group = "user";
+        } else {
+            group = "admin";
+        }
+    });
     
     connection.query("SELECT password FROM users WHERE username = ?", [username], async (err, result) => {
         if (err) {
@@ -29,7 +41,7 @@ router.post("/authenticateUser", async (req, res) => {
                 
                 res.cookie("access_token", token, { httpOnly: true });
 
-                res.status(200).json({ token: token });
+                res.status(200).json({ token: token, group: group });
             } else {
                 res.status(401).json({ message: "Username or password is incorrect."});
             }

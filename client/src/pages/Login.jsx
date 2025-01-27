@@ -21,21 +21,26 @@ const Login = () => {
 
   const login = async () => {
     try {
-      const response = await axios.post("http://localhost:8080/api/authenticateUser", { username: username, password: password }, { withCredentials: true });
-      navigate("/users");
+      const response = await axios.post("http://localhost:8080/api/authenticateUser", { username: username, password: password });
+
+      if (response.data.group === "admin") {
+        navigate("/users");
+      } else {
+        navigate("/applications");
+      }
     } catch (error) {
       setErrorMessage(error.response.data.message);
     }
   };
 
   return (
-    <div>
-      <Header />
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 200 }}>
+      <h2>Task Management System</h2>
 
-      <TextField value={username} onChange={handleUsernameChange} placeholder="Username" />
-      <TextField value={password} onChange={handlePasswordChange} placeholder="Password" />
+      <TextField value={username} onChange={handleUsernameChange} placeholder="Username" sx={{ width: "400px" }} />
+      <TextField value={password} onChange={handlePasswordChange} placeholder="Password" sx={{ width: "400px", marginBottom: "10px" }} />
 
-      {errorMessage}
+      <span style={{ color: "#ff0000" }}>{errorMessage}</span>
 
       <Button onClick={login}>Log in</Button>
     </div>
