@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import Header from "../components/Header";
 import { TextField, Button } from "@mui/material";
 
 const Login = () => {
@@ -10,6 +9,10 @@ const Login = () => {
   const [errorMessage, setErrorMessage] = useState("");
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    axios.get("http://localhost:8080/api/logout");
+  }, []);
 
   const handleUsernameChange = (event) => {
     setUsername(event.target.value);
@@ -21,8 +24,8 @@ const Login = () => {
 
   const login = async () => {
     try {
-      const response = await axios.post("http://localhost:8080/api/authenticateUser", { username: username, password: password });
-
+      const response = await axios.post("http://localhost:8080/api/login", { username: username, password: password });
+      
       if (response.data.group === "admin") {
         navigate("/users");
       } else {

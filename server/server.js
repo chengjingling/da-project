@@ -17,8 +17,14 @@ const connection = require("./config/database");
 const { validateToken } = require("./middleware/validateToken");
 const { i_checkGroup } = require("./middleware/checkGroup");
 
-const authenticateUser = require("./routes/authenticateUser");
-app.use("/api", authenticateUser);
+const login = require("./routes/login");
+app.use("/api", login);
+
+const checkToken = require("./auth/checkToken");
+app.use("/api", checkToken);
+
+const checkPermission = require("./auth/checkPermission");
+app.use("/api", validateToken, checkPermission);
 
 const logout = require("./routes/logout");
 app.use("/api", validateToken, logout);

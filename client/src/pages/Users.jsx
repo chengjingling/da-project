@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import axios from "axios"; 
 import Header from "../components/Header";
-import { TextField, Button, Table, TableHead, TableBody, TableRow, TableCell, Select, MenuItem, Checkbox, ListItemText } from "@mui/material";
+import { TextField, Button, Table, TableHead, TableBody, TableRow, TableCell, Select, MenuItem, Checkbox, ListItemText, Switch } from "@mui/material";
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -9,9 +10,19 @@ const Users = () => {
   const [groupInput, setGroupInput] = useState("");
   const [createGroupErrorMessage, setCreateGroupErrorMessage] = useState("");
 
+  const navigate = useNavigate();
+
+  const checkPermission = async () => {
+    const response = await axios.get("http://localhost:8080/api/checkPermission");
+    
+    if (!response.data.isAdmin) {
+      navigate("/");
+    }
+  };
+
   const retrieveUsers = async () => {
     const response = await axios.get("http://localhost:8080/api/retrieveUsers");
-    const usersArray = response.data.users.map(user => ({ ...user, selectedGroups: [] }));
+    const usersArray = response.data.users.map(user => ({ ...user, newPassword: "", selectedGroups: [] }));
     setUsers(usersArray);
   };
 
@@ -22,15 +33,10 @@ const Users = () => {
   };
 
   useEffect(() => {
+    checkPermission();
     retrieveUsers();
     retrieveGroups();
   }, []);
-
-  const handleGroupSelectChange = (index, event) => {
-    const newUsers = [...users];
-    newUsers[index].selectedGroups = event.target.value;
-    setUsers(newUsers);
-  };
 
   const handleGroupInputChange = (event) => {
     setGroupInput(event.target.value);
@@ -44,6 +50,38 @@ const Users = () => {
       setCreateGroupErrorMessage("");
     } catch (error) {
       setCreateGroupErrorMessage("Group already exists.");
+    }
+  };
+
+  const handlePasswordInputChange = (index, event) => {
+    const newUsers = [...users];
+    newUsers[index].newPassword = event.target.value;
+    setUsers(newUsers);
+  };
+
+  const handleEmailInputChange = (index, event) => {
+    const newUsers = [...users];
+    newUsers[index].email = event.target.value;
+    setUsers(newUsers);
+  };
+
+  const handleGroupSelectChange = (index, event) => {
+    const newUsers = [...users];
+    newUsers[index].selectedGroups = event.target.value;
+    setUsers(newUsers);
+  };
+
+  const handleStatusToggleChange = (index, event) => {
+    const newUsers = [...users];
+    newUsers[index].enabled = event.target.checked;
+    setUsers(newUsers);
+  };
+
+  const updateUser = async (index) => {
+    try {
+      console.log(users[index]);
+    } catch (error) {
+      console.error("Error updating user:", error);
     }
   };
 
@@ -83,8 +121,8 @@ const Users = () => {
             return (
               <TableRow key={index}>
                 <TableCell>{user.username}</TableCell>
-                <TableCell></TableCell>
-                <TableCell>{user.email}</TableCell>
+                <TableCell><TextField value={user.newPassword} onChange={(event) => handlePasswordInputChange(index, event)} /></TableCell>
+                <TableCell><TextField value={user.email} onChange={(event) => handleEmailInputChange(index, event)} /></TableCell>
                 <TableCell>
                   <Select
                       multiple
@@ -101,8 +139,8 @@ const Users = () => {
                     ))}
                   </Select>
                 </TableCell>
-                <TableCell>{user.enabled === 1 ? "Enabled" : "Disabled"}</TableCell>
-                <TableCell></TableCell>
+                <TableCell><Switch checked={user.enabled} onChange={(event) => handleStatusToggleChange(index, event)} /></TableCell>
+                <TableCell><Button onClick={() => updateUser(index)}>Update</Button></TableCell>
               </TableRow>
             );
           })}

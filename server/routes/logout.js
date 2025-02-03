@@ -3,7 +3,7 @@ const router = express.Router();
 
 router.get("/logout", async (req, res) => {
     res
-    .clearCookie("access_token")
+    .clearCookie("token")
     .status(200)
     .json({ message: "logged out" });
 });

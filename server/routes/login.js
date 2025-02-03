@@ -5,7 +5,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv").config();
 
-router.post("/authenticateUser", async (req, res) => {
+router.post("/login", async (req, res) => {
     const { username, password } = req.body;
     let group;
 
@@ -39,7 +39,7 @@ router.post("/authenticateUser", async (req, res) => {
             
                 const token = jwt.sign(data, process.env.JWT_SECRET_KEY);
                 
-                res.cookie("access_token", token, { httpOnly: true });
+                res.cookie("token", token, { httpOnly: true });
 
                 res.status(200).json({ token: token, group: group });
             } else {
