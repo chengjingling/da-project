@@ -2,13 +2,18 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios"; 
 import Header from "../components/Header";
-import { TextField, Button, Table, TableHead, TableBody, TableRow, TableCell, Select, MenuItem, Checkbox, ListItemText, Switch } from "@mui/material";
+import { Alert, TextField, Button, Table, TableHead, TableBody, TableRow, TableCell, Select, MenuItem, Checkbox, ListItemText, Switch } from "@mui/material";
 
 const Users = () => {
   const [users, setUsers] = useState([]);
   const [groups, setGroups] = useState([]);
   const [groupInput, setGroupInput] = useState("");
-  const [createGroupErrorMessage, setCreateGroupErrorMessage] = useState("");
+  const [usernameInput, setUsernameInput] = useState("");
+  const [passwordInput, setPasswordInput] = useState("");
+  const [emailInput, setEmailInput] = useState("");
+  const [groupsSelect, setGroupsSelect] = useState([]);
+  const [statusToggle, setStatusToggle] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const navigate = useNavigate();
 
@@ -36,40 +41,67 @@ const Users = () => {
     retrieveUsersAndGroups();
   }, []);
 
-  const handleGroupInputChange = (event) => {
+  const CG_handleGroupInputChange = (event) => {
     setGroupInput(event.target.value);
   };
 
   const createGroup = async () => {
     try {
       const response = await axios.post("http://localhost:8080/api/createGroup", { groupName: groupInput });
-      setGroups((prevGroups) => [...prevGroups, groupInput].sort());
-      setGroupInput("");
-      setCreateGroupErrorMessage("");
+      navigate(0);
     } catch (error) {
-      setCreateGroupErrorMessage("Group already exists.");
+      setErrorMessage(error.response.data.message);
     }
   };
 
-  const handlePasswordInputChange = (index, event) => {
+  const CU_handleUsernameChange = (event) => {
+    setUsernameInput(event.target.value);
+  };
+
+  const CU_handlePasswordChange = (event) => {
+    setPasswordInput(event.target.value);
+  };
+
+  const CU_handleEmailChange = (event) => {
+    setEmailInput(event.target.value);
+  };
+
+  const CU_handleGroupsChange = (event) => {
+    setGroupsSelect(event.target.value);
+  };
+
+  const CU_handleStatusChange = (event) => {
+    setStatusToggle(event.target.checked);
+  };
+
+  const createUser = async () => {
+    try {
+      const response = await axios.post("http://localhost:8080/api/createUser", { username: usernameInput, password: passwordInput, email: emailInput, groups: groupsSelect, enabled: statusToggle });
+      navigate(0);
+    } catch (error) {
+      setErrorMessage(error.response.data.message);
+    }
+  };
+
+  const UU_handlePasswordChange = (index, event) => {
     const newUsers = [...users];
     newUsers[index].newPassword = event.target.value;
     setUsers(newUsers);
   };
 
-  const handleEmailInputChange = (index, event) => {
+  const UU_handleEmailChange = (index, event) => {
     const newUsers = [...users];
     newUsers[index].email = event.target.value;
     setUsers(newUsers);
   };
 
-  const handleGroupSelectChange = (index, event) => {
+  const UU_handleGroupsChange = (index, event) => {
     const newUsers = [...users];
     newUsers[index].selectedGroups = event.target.value;
     setUsers(newUsers);
   };
 
-  const handleStatusToggleChange = (index, event) => {
+  const UU_handleStatusChange = (index, event) => {
     const newUsers = [...users];
     newUsers[index].enabled = event.target.checked;
     setUsers(newUsers);
@@ -78,30 +110,25 @@ const Users = () => {
   const updateUser = async (index) => {
     try {
       const response = await axios.put("http://localhost:8080/api/updateUser", users[index]);
-      console.log("updated");
+      navigate(0);
     } catch (error) {
-      console.error("Error updating user:", error);
+      setErrorMessage(error.response.data.message);
     }
   };
 
   return (
-    <div style={{ paddingTop: 80 }}>
+    <div style={{ paddingTop: 66 }}>
       <Header />
 
-      <table style={{ marginLeft: "auto" }}>
-        <tbody>
-          <tr>
-            <td>Group name:</td>
-            <td><TextField value={groupInput} onChange={handleGroupInputChange} /></td>
-            <td><Button onClick={createGroup}>Create</Button></td>
-          </tr>
-          <tr>
-            <td></td>
-            <td style={{ color: "#ff0000" }}>{createGroupErrorMessage}</td>
-            <td></td>
-          </tr>
-        </tbody>
-      </table>
+      {errorMessage &&
+        <Alert severity="error" sx={{ display: "flex", alignItems: "center", height: "60px" }}>{errorMessage}</Alert>
+      }
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginTop: 10 }}>
+        Group name:
+        <TextField value={groupInput} onChange={CG_handleGroupInputChange} />
+        <Button onClick={createGroup}>Create</Button>
+      </div>
         
       <Table>
         <TableHead>
@@ -116,19 +143,43 @@ const Users = () => {
         </TableHead>
 
         <TableBody>
+          <TableRow>
+            <TableCell><TextField value={usernameInput} onChange={(event) => CU_handleUsernameChange(event)} /></TableCell>
+            <TableCell><TextField value={passwordInput} onChange={(event) => CU_handlePasswordChange(event)} /></TableCell>
+            <TableCell><TextField value={emailInput} onChange={(event) => CU_handleEmailChange(event)} /></TableCell>
+            <TableCell>
+              <Select
+                multiple
+                value={groupsSelect}
+                onChange={(event) => CU_handleGroupsChange(event)}
+                renderValue={(selected) => selected.join(", ")}
+                style={{ width: "150px" }}
+              >
+                {groups.map((group) => (
+                  <MenuItem key={group} value={group}>
+                    <Checkbox checked={groupsSelect.includes(group)} />
+                    <ListItemText primary={group} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </TableCell>
+            <TableCell><Switch checked={statusToggle} onChange={(event) => CU_handleStatusChange(event)} /></TableCell>
+            <TableCell><Button onClick={() => createUser()}>Create</Button></TableCell>
+          </TableRow>
+
           {users.map((user, index) => {
             return (
               <TableRow key={index}>
                 <TableCell>{user.username}</TableCell>
-                <TableCell><TextField value={user.newPassword} onChange={(event) => handlePasswordInputChange(index, event)} /></TableCell>
-                <TableCell><TextField value={user.email} onChange={(event) => handleEmailInputChange(index, event)} /></TableCell>
+                <TableCell><TextField value={user.newPassword} onChange={(event) => UU_handlePasswordChange(index, event)} /></TableCell>
+                <TableCell><TextField value={user.email} onChange={(event) => UU_handleEmailChange(index, event)} /></TableCell>
                 <TableCell>
                   <Select
-                      multiple
-                      value={user.selectedGroups}
-                      onChange={(event) => handleGroupSelectChange(index, event)}
-                      renderValue={(selected) => selected.join(", ")}
-                      style={{ width: "150px" }}
+                    multiple
+                    value={user.selectedGroups}
+                    onChange={(event) => UU_handleGroupsChange(index, event)}
+                    renderValue={(selected) => selected.join(", ")}
+                    style={{ width: "150px" }}
                   >
                     {groups.map((group) => (
                       <MenuItem key={group} value={group}>
@@ -138,7 +189,7 @@ const Users = () => {
                     ))}
                   </Select>
                 </TableCell>
-                <TableCell><Switch checked={user.enabled} onChange={(event) => handleStatusToggleChange(index, event)} /></TableCell>
+                <TableCell><Switch checked={user.enabled} onChange={(event) => UU_handleStatusChange(index, event)} /></TableCell>
                 <TableCell><Button onClick={() => updateUser(index)}>Update</Button></TableCell>
               </TableRow>
             );

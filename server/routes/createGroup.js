@@ -8,7 +8,7 @@ router.post("/createGroup", (req, res) => {
     
     connection.query("INSERT INTO user_group SET ?", data, (err, result) => {
         if (err) {
-            res.status(409).json({ message: "group already exists" });
+            res.status(409).json({ message: "Group name already exists." });
         } else {
             res.status(201).json({ message: "group created" });
         }
