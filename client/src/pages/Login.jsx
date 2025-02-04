@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { TextField, Button } from "@mui/material";
@@ -9,10 +9,6 @@ const Login = () => {
   const [errorMessage, setErrorMessage] = useState("");
 
   const navigate = useNavigate();
-
-  useEffect(() => {
-    axios.get("http://localhost:8080/api/logout");
-  }, []);
 
   const handleUsernameChange = (event) => {
     setUsername(event.target.value);

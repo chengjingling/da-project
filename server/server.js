@@ -35,6 +35,9 @@ app.use("/api", validateToken, retrieveUserGroups);
 const retrieveUsers = require("./routes/retrieveUsers");
 app.use("/api", validateToken, i_checkGroup, retrieveUsers);
 
+const updateUser = require("./routes/updateUser");
+app.use("/api", validateToken, i_checkGroup, updateUser);
+
 const retrieveGroups = require("./routes/retrieveGroups");
 app.use("/api", validateToken, i_checkGroup, retrieveGroups);
 

@@ -16,26 +16,24 @@ const Users = () => {
     const response = await axios.get("http://localhost:8080/api/checkPermission");
     
     if (!response.data.isAdmin) {
+      const response = await axios.get("http://localhost:8080/api/logout");
       navigate("/");
     }
   };
 
-  const retrieveUsers = async () => {
-    const response = await axios.get("http://localhost:8080/api/retrieveUsers");
-    const usersArray = response.data.users.map(user => ({ ...user, newPassword: "", selectedGroups: [] }));
-    setUsers(usersArray);
-  };
+  const retrieveUsersAndGroups = async () => {
+    const usersResponse = await axios.get("http://localhost:8080/api/retrieveUsers");
+    const groupsResponse = await axios.get("http://localhost:8080/api/retrieveGroups");
+    
+    const usersArray = usersResponse.data.users.map(user => ({ ...user, newPassword: "", selectedGroups: groupsResponse.data[user.username] ? groupsResponse.data[user.username] : [] }));
 
-  const retrieveGroups = async () => {
-    const response = await axios.get("http://localhost:8080/api/retrieveGroups");
-    const groupsArray = response.data.groups.map(group => group.groupName);
-    setGroups(groupsArray);
+    setUsers(usersArray);
+    setGroups(groupsResponse.data.all);
   };
 
   useEffect(() => {
     checkPermission();
-    retrieveUsers();
-    retrieveGroups();
+    retrieveUsersAndGroups();
   }, []);
 
   const handleGroupInputChange = (event) => {
@@ -79,7 +77,8 @@ const Users = () => {
 
   const updateUser = async (index) => {
     try {
-      console.log(users[index]);
+      const response = await axios.put("http://localhost:8080/api/updateUser", users[index]);
+      console.log("updated");
     } catch (error) {
       console.error("Error updating user:", error);
     }
