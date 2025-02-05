@@ -10,8 +10,12 @@ router.post("/createUser", async (req, res) => {
     const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]).{8,10}$/;
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     
-    if (data.username.trim() === "") {
+    if (data.username === "") {
         return res.status(400).json({ message: "Username cannot be blank." });
+    }
+
+    if (data.username.length > 50) {
+        return res.status(400).json({ message: "Username cannot be more than 50 characters." });
     }
 
     if (!usernameRegex.test(data.username)) {
@@ -22,7 +26,7 @@ router.post("/createUser", async (req, res) => {
         return res.status(400).json({ message: "Password must be 8 to 10 characters long and contain letters, numbers and special characters." });
     }
 
-    if (data.email.trim() !== "" && !emailRegex.test(data.email)) {
+    if (data.email !== "" && !emailRegex.test(data.email)) {
         return res.status(400).json({ message: "Invalid email format." });
     }
 
@@ -43,9 +47,12 @@ router.post("/createUser", async (req, res) => {
         }
 
         res.status(201).json({ message: "user created" });
-
     } catch (err) {
-        res.status(409).json({ message: "Username already exists." });
+        if (err.code === "ER_DUP_ENTRY") {
+            res.status(409).json({ message: "Username already exists." });
+        } else {
+            res.status(500).json({ message: "An error occurred, please try again." });
+        }
     }
 });
 

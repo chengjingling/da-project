@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import Applications from "./pages/Applications";
 import Users from "./pages/Users";
+import Profile from "./pages/Profile";
 import PrivateRoutes from "./utils/PrivateRoutes";
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
         <Route element={<PrivateRoutes />}>
           <Route path="/applications" element={<Applications />} />
           <Route path="/users" element={<Users />} />
+          <Route path="/profile" element={<Profile />} />
         </Route>
       </Routes>
   );

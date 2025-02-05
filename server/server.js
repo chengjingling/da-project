@@ -29,8 +29,14 @@ app.use("/api", validateToken, checkPermission);
 const logout = require("./routes/logout");
 app.use("/api", validateToken, logout);
 
+const retrieveUser = require("./routes/retrieveUser");
+app.use("/api", validateToken, retrieveUser);
+
 const retrieveUserGroups = require("./routes/retrieveUserGroups");
 app.use("/api", validateToken, retrieveUserGroups);
+
+const updateProfile = require("./routes/updateProfile");
+app.use("/api", validateToken, updateProfile);
 
 const retrieveUsers = require("./routes/retrieveUsers");
 app.use("/api", validateToken, i_checkGroup, retrieveUsers);

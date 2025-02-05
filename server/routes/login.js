@@ -20,17 +20,21 @@ router.post("/login", async (req, res) => {
         }
     });
     
-    connection.query("SELECT password FROM users WHERE username = ?", [username], async (err, result) => {
+    connection.query("SELECT * FROM users WHERE username = ?", [username], async (err, result) => {
         if (err) {
             console.error("Error selecting user:", err);
             res.status(500);
         } else if (result.length === 0) {
-            res.status(401).json({ message: "Username or password is incorrect."});
+            res.status(401).json({ message: "Username or password is incorrect." });
         } else {
             const hashedPassword = result[0].password;
             const isMatch = await bcrypt.compare(password, hashedPassword);
             
             if (isMatch) {
+                if (!result[0].enabled) {
+                    return res.status(403).json({ message: "Your account is disabled." });
+                }
+
                 const data = {
                     ipAddress: req.ip,
                     browserType: req.headers["user-agent"],
@@ -43,7 +47,7 @@ router.post("/login", async (req, res) => {
 
                 res.status(200).json({ token: token, group: group });
             } else {
-                res.status(401).json({ message: "Username or password is incorrect."});
+                res.status(401).json({ message: "Username or password is incorrect." });
             }
         }
     });

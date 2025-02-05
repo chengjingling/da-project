@@ -1,7 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { TextField, Button } from "@mui/material";
+import { TextField, Alert, Button } from "@mui/material";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -37,9 +37,11 @@ const Login = () => {
       <h2>Task Management System</h2>
 
       <TextField value={username} onChange={handleUsernameChange} placeholder="Username" sx={{ width: "400px" }} />
-      <TextField value={password} onChange={handlePasswordChange} placeholder="Password" sx={{ width: "400px", marginBottom: "10px" }} />
+      <TextField value={password} onChange={handlePasswordChange} placeholder="Password" sx={{ width: "400px", marginBottom: "10px" }} type="password" />
 
-      <span style={{ color: "#ff0000" }}>{errorMessage}</span>
+      {errorMessage &&
+        <Alert severity="error" sx={{ display: "flex", alignItems: "center", height: "60px", marginBottom: "10px" }}>{errorMessage}</Alert>
+      }
 
       <Button onClick={login}>Log in</Button>
     </div>

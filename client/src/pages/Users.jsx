@@ -126,7 +126,7 @@ const Users = () => {
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginTop: 10 }}>
         Group name:
-        <TextField value={groupInput} onChange={CG_handleGroupInputChange} />
+        <TextField value={groupInput} onChange={CG_handleGroupInputChange} sx={{ marginLeft: "10px" }} />
         <Button onClick={createGroup}>Create</Button>
       </div>
         
@@ -144,16 +144,16 @@ const Users = () => {
 
         <TableBody>
           <TableRow>
-            <TableCell><TextField value={usernameInput} onChange={(event) => CU_handleUsernameChange(event)} /></TableCell>
-            <TableCell><TextField value={passwordInput} onChange={(event) => CU_handlePasswordChange(event)} /></TableCell>
-            <TableCell><TextField value={emailInput} onChange={(event) => CU_handleEmailChange(event)} /></TableCell>
+            <TableCell><TextField value={usernameInput} onChange={(event) => CU_handleUsernameChange(event)} placeholder="Enter username" /></TableCell>
+            <TableCell><TextField value={passwordInput} onChange={(event) => CU_handlePasswordChange(event)} placeholder="Enter password" type="password" /></TableCell>
+            <TableCell><TextField value={emailInput} onChange={(event) => CU_handleEmailChange(event)} placeholder="Enter email" /></TableCell>
             <TableCell>
               <Select
                 multiple
                 value={groupsSelect}
                 onChange={(event) => CU_handleGroupsChange(event)}
                 renderValue={(selected) => selected.join(", ")}
-                style={{ width: "150px" }}
+                sx={{ width: "150px" }}
               >
                 {groups.map((group) => (
                   <MenuItem key={group} value={group}>
@@ -171,15 +171,15 @@ const Users = () => {
             return (
               <TableRow key={index}>
                 <TableCell>{user.username}</TableCell>
-                <TableCell><TextField value={user.newPassword} onChange={(event) => UU_handlePasswordChange(index, event)} /></TableCell>
-                <TableCell><TextField value={user.email} onChange={(event) => UU_handleEmailChange(index, event)} /></TableCell>
+                <TableCell><TextField value={user.newPassword} onChange={(event) => UU_handlePasswordChange(index, event)} placeholder="Reset password" type="password" /></TableCell>
+                <TableCell><TextField value={user.email} onChange={(event) => UU_handleEmailChange(index, event)} placeholder="Enter email" /></TableCell>
                 <TableCell>
                   <Select
                     multiple
                     value={user.selectedGroups}
                     onChange={(event) => UU_handleGroupsChange(index, event)}
                     renderValue={(selected) => selected.join(", ")}
-                    style={{ width: "150px" }}
+                    sx={{ width: "150px" }}
                   >
                     {groups.map((group) => (
                       <MenuItem key={group} value={group}>

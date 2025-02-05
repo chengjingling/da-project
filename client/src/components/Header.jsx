@@ -35,8 +35,8 @@ const Header = () => {
           <NavLink to="/users" style={{ color: "#fff", textDecoration: "none", marginLeft: 20 }} onMouseEnter={(e) => e.target.style.color = "#556cd6"} onMouseLeave={(e) => e.target.style.color = "#fff"}>User Management</NavLink>
         }
         <Box sx={{ flexGrow: 1 }} />
-        <Typography style={{ fontStyle: "italic" }}>Logged in as: {username}</Typography>
-        <NavLink style={{ color: "#fff", textDecoration: "none", marginLeft: 20 }} onMouseEnter={(e) => e.target.style.color = "#556cd6"} onMouseLeave={(e) => e.target.style.color = "#fff"}>Profile</NavLink>
+        <Typography sx={{ fontStyle: "italic" }}>Logged in as: {username}</Typography>
+        <NavLink to="/profile" style={{ color: "#fff", textDecoration: "none", marginLeft: 20 }} onMouseEnter={(e) => e.target.style.color = "#556cd6"} onMouseLeave={(e) => e.target.style.color = "#fff"}>Profile</NavLink>
         <NavLink onClick={logout} style={{ color: "#fff", textDecoration: "none", marginLeft: 20 }} onMouseEnter={(e) => e.target.style.color = "#556cd6"} onMouseLeave={(e) => e.target.style.color = "#fff"}>Log Out</NavLink>
       </Toolbar>
     </AppBar>
