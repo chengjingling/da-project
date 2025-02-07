@@ -2,18 +2,27 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Header from "../components/Header";
-import { TextField, Alert, Button } from "@mui/material";
+import { Typography, TextField, Alert, Button } from "@mui/material";
 
 const Profile = () => {
+    const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+    const [newEmail, setNewEmail] = useState("");
+    const [newPassword, setNewPassword] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
   
     const navigate = useNavigate();
 
     const retrieveUser = async () => {
       const response = await axios.get("http://localhost:8080/api/retrieveUser");
-      setEmail(response.data.user.email);
+
+      setUsername(response.data.user.username);
+
+      if (response.data.user.email === "") {
+        setEmail("No email");
+      } else {
+        setEmail(response.data.user.email);
+      }
     };
 
     useEffect(() => {
@@ -21,16 +30,16 @@ const Profile = () => {
     }, []);
   
     const handleEmailChange = (event) => {
-      setEmail(event.target.value);
+      setNewEmail(event.target.value);
     };
   
     const handlePasswordChange = (event) => {
-      setPassword(event.target.value);
+      setNewPassword(event.target.value);
     };
   
     const updateProfile = async () => {
       try {
-        const response = await axios.patch("http://localhost:8080/api/updateProfile", { email: email, password: password });
+        const response = await axios.patch("http://localhost:8080/api/updateProfile", { email: newEmail, password: newPassword });
         navigate(0);
       } catch (error) {
         setErrorMessage(error.response.data.message);
@@ -41,10 +50,12 @@ const Profile = () => {
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 200 }}>
             <Header />
 
-            <h2>Profile</h2>
+            <Typography variant="h5" sx={{ marginBottom: "10px" }}>Profile</Typography>
 
-            <TextField value={email} onChange={handleEmailChange} placeholder="Email" sx={{ width: "400px" }} />
-            <TextField value={password} onChange={handlePasswordChange} placeholder="Reset password" sx={{ width: "400px", marginBottom: "10px" }} type="password" />
+            <TextField value={username} label="Username" sx={{ width: "400px", marginBottom: "10px" }} disabled />
+            <TextField value={email} label="Email" sx={{ width: "400px", marginBottom: "10px" }} disabled />
+            <TextField value={newEmail} label="Update email" onChange={handleEmailChange} sx={{ width: "400px", marginBottom: "10px" }} />
+            <TextField value={newPassword} label="Update password" onChange={handlePasswordChange} sx={{ width: "400px", marginBottom: "10px" }} type="password" />
 
             {errorMessage &&
               <Alert severity="error" sx={{ display: "flex", alignItems: "center", height: "60px", marginBottom: "10px" }}>{errorMessage}</Alert>

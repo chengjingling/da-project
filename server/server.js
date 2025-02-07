@@ -26,6 +26,9 @@ app.use("/api", checkToken);
 const checkPermission = require("./auth/checkPermission");
 app.use("/api", validateToken, checkPermission);
 
+const checkAccountStatus = require("./auth/checkAccountStatus");
+app.use("/api", validateToken, checkAccountStatus);
+
 const logout = require("./routes/logout");
 app.use("/api", validateToken, logout);
 

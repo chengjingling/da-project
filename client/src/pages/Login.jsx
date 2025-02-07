@@ -1,7 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { TextField, Alert, Button } from "@mui/material";
+import { Typography, TextField, Alert, Button } from "@mui/material";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -34,10 +34,10 @@ const Login = () => {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 200 }}>
-      <h2>Task Management System</h2>
+      <Typography variant="h5" sx={{ marginBottom: "10px" }}>Task Management System</Typography>
 
-      <TextField value={username} onChange={handleUsernameChange} placeholder="Username" sx={{ width: "400px" }} />
-      <TextField value={password} onChange={handlePasswordChange} placeholder="Password" sx={{ width: "400px", marginBottom: "10px" }} type="password" />
+      <TextField value={username} label="Username" onChange={handleUsernameChange} sx={{ width: "400px", marginBottom: "10px" }} />
+      <TextField value={password} label="Password" onChange={handlePasswordChange} sx={{ width: "400px", marginBottom: "10px" }} type="password" />
 
       {errorMessage &&
         <Alert severity="error" sx={{ display: "flex", alignItems: "center", height: "60px", marginBottom: "10px" }}>{errorMessage}</Alert>

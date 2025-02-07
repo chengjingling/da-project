@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios"; 
 import Header from "../components/Header";
-import { Alert, TextField, Button, Table, TableHead, TableBody, TableRow, TableCell, Select, MenuItem, Checkbox, ListItemText, Switch } from "@mui/material";
+import { Alert, Typography, TextField, Button, Table, TableHead, TableBody, TableRow, TableCell, Select, MenuItem, Checkbox, ListItemText, Switch } from "@mui/material";
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -26,6 +26,15 @@ const Users = () => {
     }
   };
 
+  const checkAccountStatus = async () => {
+    const response = await axios.get("http://localhost:8080/api/checkAccountStatus");
+    
+    if (!response.data.isEnabled) {
+      const response = await axios.get("http://localhost:8080/api/logout");
+      navigate("/");
+    }
+  };
+
   const retrieveUsersAndGroups = async () => {
     const usersResponse = await axios.get("http://localhost:8080/api/retrieveUsers");
     const groupsResponse = await axios.get("http://localhost:8080/api/retrieveGroups");
@@ -38,6 +47,7 @@ const Users = () => {
 
   useEffect(() => {
     checkPermission();
+    checkAccountStatus();
     retrieveUsersAndGroups();
   }, []);
 
@@ -117,17 +127,21 @@ const Users = () => {
   };
 
   return (
-    <div style={{ paddingTop: 66 }}>
+    <div style={{ paddingTop: 65 }}>
       <Header />
 
       {errorMessage &&
         <Alert severity="error" sx={{ display: "flex", alignItems: "center", height: "60px" }}>{errorMessage}</Alert>
       }
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginTop: 10 }}>
-        Group name:
-        <TextField value={groupInput} onChange={CG_handleGroupInputChange} sx={{ marginLeft: "10px" }} />
-        <Button onClick={createGroup}>Create</Button>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 20 }}>
+        <Typography variant="h4" sx={{ marginLeft: "10px" }}>Users</Typography>
+        
+        <div style={{ display: "flex", alignItems: "center" }}>
+          Group name:
+          <TextField value={groupInput} onChange={CG_handleGroupInputChange} sx={{ marginLeft: "10px" }} />
+          <Button onClick={createGroup}>Create</Button>
+        </div>
       </div>
         
       <Table>
