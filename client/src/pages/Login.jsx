@@ -21,12 +21,7 @@ const Login = () => {
   const login = async () => {
     try {
       const response = await axios.post("http://localhost:8080/api/login", { username: username, password: password });
-      
-      if (response.data.group === "admin") {
-        navigate("/users");
-      } else {
-        navigate("/applications");
-      }
+      navigate("/applications");
     } catch (error) {
       setErrorMessage(error.response.data.message);
     }
