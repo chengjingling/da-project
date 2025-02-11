@@ -18,26 +18,26 @@ const Users = () => {
   const navigate = useNavigate();
 
   const checkPermission = async () => {
-    const response = await axios.get("http://localhost:8080/api/checkPermission");
+    const response = await axios.get("http://localhost:8080/api/auth/checkPermission");
     
     if (!response.data.isAdmin) {
-      const response = await axios.get("http://localhost:8080/api/logout");
+      const response = await axios.get("http://localhost:8080/api/auth/logout");
       navigate("/");
     }
   };
 
   const checkAccountStatus = async () => {
-    const response = await axios.get("http://localhost:8080/api/checkAccountStatus");
+    const response = await axios.get("http://localhost:8080/api/auth/checkAccountStatus");
     
     if (!response.data.isEnabled) {
-      const response = await axios.get("http://localhost:8080/api/logout");
+      const response = await axios.get("http://localhost:8080/api/auth/logout");
       navigate("/");
     }
   };
 
   const retrieveUsersAndGroups = async () => {
-    const usersResponse = await axios.get("http://localhost:8080/api/retrieveUsers");
-    const groupsResponse = await axios.get("http://localhost:8080/api/retrieveGroups");
+    const usersResponse = await axios.get("http://localhost:8080/api/user/retrieveUsers");
+    const groupsResponse = await axios.get("http://localhost:8080/api/user/retrieveGroups");
     
     const usersArray = usersResponse.data.users.map(user => ({ ...user, newPassword: "", selectedGroups: groupsResponse.data[user.username] ? groupsResponse.data[user.username] : [] }));
 
@@ -57,10 +57,15 @@ const Users = () => {
 
   const createGroup = async () => {
     try {
-      const response = await axios.post("http://localhost:8080/api/createGroup", { groupName: groupInput });
+      const response = await axios.post("http://localhost:8080/api/user/createGroup", { groupName: groupInput });
       navigate(0);
     } catch (error) {
-      setErrorMessage(error.response.data.message);
+      if (error.response.status === 403) {
+        const response = await axios.get("http://localhost:8080/api/auth/logout");
+        navigate("/");
+      } else {
+        setErrorMessage(error.response.data.message);
+      }
     }
   };
 
@@ -86,10 +91,15 @@ const Users = () => {
 
   const createUser = async () => {
     try {
-      const response = await axios.post("http://localhost:8080/api/createUser", { username: usernameInput, password: passwordInput, email: emailInput, groups: groupsSelect, enabled: statusToggle });
+      const response = await axios.post("http://localhost:8080/api/user/createUser", { username: usernameInput, password: passwordInput, email: emailInput, groups: groupsSelect, enabled: statusToggle });
       navigate(0);
     } catch (error) {
-      setErrorMessage(error.response.data.message);
+      if (error.response.status === 403) {
+        const response = await axios.get("http://localhost:8080/api/auth/logout");
+        navigate("/");
+      } else {
+        setErrorMessage(error.response.data.message);
+      }
     }
   };
 
@@ -119,10 +129,15 @@ const Users = () => {
 
   const updateUser = async (index) => {
     try {
-      const response = await axios.put("http://localhost:8080/api/updateUser", users[index]);
+      const response = await axios.put("http://localhost:8080/api/user/updateUser", users[index]);
       navigate(0);
     } catch (error) {
-      setErrorMessage(error.response.data.message);
+      if (error.response.status === 403) {
+        const response = await axios.get("http://localhost:8080/api/auth/logout");
+        navigate("/");
+      } else {
+        setErrorMessage(error.response.data.message);
+      }
     }
   };
 

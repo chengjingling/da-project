@@ -9,7 +9,7 @@ const PrivateRoutes = () => {
   useEffect(() => {
     const checkToken = async () => {
       try {
-        const response = await axios.get("http://localhost:8080/api/checkToken");
+        const response = await axios.get("http://localhost:8080/api/auth/checkToken");
         setIsAuthenticated(response.data.token);
       } catch (error) {
         console.error("Error checking token:", error);

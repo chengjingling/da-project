@@ -14,14 +14,14 @@ const Profile = () => {
     const navigate = useNavigate();
 
     const retrieveUser = async () => {
-      const response = await axios.get("http://localhost:8080/api/retrieveUser");
+      const response = await axios.get("http://localhost:8080/api/user/retrieveUser");
 
-      setUsername(response.data.user.username);
+      setUsername(response.data.user.user_username);
 
-      if (response.data.user.email === "") {
+      if (response.data.user.user_email === "") {
         setEmail("No email");
       } else {
-        setEmail(response.data.user.email);
+        setEmail(response.data.user.user_email);
       }
     };
 
@@ -39,7 +39,7 @@ const Profile = () => {
   
     const updateProfile = async () => {
       try {
-        const response = await axios.patch("http://localhost:8080/api/updateProfile", { email: newEmail, password: newPassword });
+        const response = await axios.patch("http://localhost:8080/api/user/updateProfile", { email: newEmail, password: newPassword });
         navigate(0);
       } catch (error) {
         setErrorMessage(error.response.data.message);

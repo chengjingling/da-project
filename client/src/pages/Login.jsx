@@ -20,7 +20,7 @@ const Login = () => {
 
   const login = async () => {
     try {
-      const response = await axios.post("http://localhost:8080/api/login", { username: username, password: password });
+      const response = await axios.post("http://localhost:8080/api/auth/login", { username: username, password: password });
       navigate("/applications");
     } catch (error) {
       setErrorMessage(error.response.data.message);
