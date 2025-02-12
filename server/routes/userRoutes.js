@@ -1,17 +1,19 @@
 const express = require("express");
 const router = express.Router();
-const { retrieveUser, retrieveUserGroups, updateProfile, retrieveUsers, createUser, updateUser, retrieveGroups, createGroup } = require("../controllers/usersController");
+const { retrieveUser, updateProfile, retrieveUsers, createUser, updateUser, retrieveGroups, createGroup } = require("../controllers/usersController");
 const { validateToken } = require("../middleware/validateToken");
 const { i_checkGroup } = require("../middleware/checkGroup");
 
 router.use(validateToken);
 
+const checkIfAdmin = i_checkGroup("admin");
+
 router.get("/retrieveUser", retrieveUser);
 router.patch("/updateProfile", updateProfile);
-router.get("/retrieveUsers", i_checkGroup, retrieveUsers);
-router.post("/createUser", i_checkGroup, createUser);
-router.put("/updateUser", i_checkGroup, updateUser);
-router.get("/retrieveGroups", i_checkGroup, retrieveGroups);
-router.post("/createGroup", i_checkGroup, createGroup);
+router.get("/retrieveUsers", checkIfAdmin, retrieveUsers);
+router.post("/createUser", checkIfAdmin, createUser);
+router.put("/updateUser", checkIfAdmin, updateUser);
+router.get("/retrieveGroups", checkIfAdmin, retrieveGroups);
+router.post("/createGroup", checkIfAdmin, createGroup);
 
 module.exports = router;

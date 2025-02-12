@@ -32,7 +32,7 @@ connection.query("CREATE TABLE user_group (user_group_username VARCHAR(50), user
     }
 });
 
-connection.query("CREATE TABLE applications (app_acronym VARCHAR(20), app_description VARCHAR(1000), app_rNumber INT, app_startDate DATE, app_endDate DATE, app_permitCreate VARCHAR(50), app_permitOpen VARCHAR(50), app_permitToDoList VARCHAR(50), app_permitDoing VARCHAR(50), app_permitDone VARCHAR(50), PRIMARY KEY (app_acronym))", (err, result) => {
+connection.query("CREATE TABLE applications (app_acronym VARCHAR(20), app_rNumber INT NOT NULL, app_description VARCHAR(1000), app_startDate DATE, app_endDate DATE, app_permitCreate VARCHAR(50), app_permitOpen VARCHAR(50), app_permitToDoList VARCHAR(50), app_permitDoing VARCHAR(50), app_permitDone VARCHAR(50), PRIMARY KEY (app_acronym))", (err, result) => {
     if (err) {
         console.error("Error creating applications table:", err);
     } else {

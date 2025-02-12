@@ -39,7 +39,7 @@ const Users = () => {
     const usersResponse = await axios.get("http://localhost:8080/api/user/retrieveUsers");
     const groupsResponse = await axios.get("http://localhost:8080/api/user/retrieveGroups");
     
-    const usersArray = usersResponse.data.users.map(user => ({ ...user, newPassword: "", selectedGroups: groupsResponse.data[user.username] ? groupsResponse.data[user.username] : [] }));
+    const usersArray = usersResponse.data.users.map(user => ({ ...user, newPassword: "", selectedGroups: groupsResponse.data[user.user_username] ? groupsResponse.data[user.user_username] : [] }));
 
     setUsers(usersArray);
     setGroups(groupsResponse.data.all);
@@ -57,7 +57,7 @@ const Users = () => {
 
   const createGroup = async () => {
     try {
-      const response = await axios.post("http://localhost:8080/api/user/createGroup", { groupName: groupInput });
+      const response = await axios.post("http://localhost:8080/api/user/createGroup", { user_group_groupName: groupInput });
       navigate(0);
     } catch (error) {
       if (error.response.status === 403) {
@@ -111,7 +111,7 @@ const Users = () => {
 
   const UU_handleEmailChange = (index, event) => {
     const newUsers = [...users];
-    newUsers[index].email = event.target.value;
+    newUsers[index].user_email = event.target.value;
     setUsers(newUsers);
   };
 
@@ -123,7 +123,7 @@ const Users = () => {
 
   const UU_handleStatusChange = (index, event) => {
     const newUsers = [...users];
-    newUsers[index].enabled = event.target.checked;
+    newUsers[index].user_enabled = event.target.checked;
     setUsers(newUsers);
   };
 
@@ -199,9 +199,9 @@ const Users = () => {
           {users.map((user, index) => {
             return (
               <TableRow key={index}>
-                <TableCell>{user.username}</TableCell>
+                <TableCell>{user.user_username}</TableCell>
                 <TableCell><TextField value={user.newPassword} onChange={(event) => UU_handlePasswordChange(index, event)} placeholder="Reset password" type="password" /></TableCell>
-                <TableCell><TextField value={user.email} onChange={(event) => UU_handleEmailChange(index, event)} placeholder="Enter email" /></TableCell>
+                <TableCell><TextField value={user.user_email} onChange={(event) => UU_handleEmailChange(index, event)} placeholder="Enter email" /></TableCell>
                 <TableCell>
                   <Select
                     multiple
@@ -218,7 +218,7 @@ const Users = () => {
                     ))}
                   </Select>
                 </TableCell>
-                <TableCell><Switch checked={user.enabled} onChange={(event) => UU_handleStatusChange(index, event)} /></TableCell>
+                <TableCell><Switch checked={user.user_enabled} onChange={(event) => UU_handleStatusChange(index, event)} /></TableCell>
                 <TableCell><Button onClick={() => updateUser(index)}>Update</Button></TableCell>
               </TableRow>
             );

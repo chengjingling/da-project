@@ -47,22 +47,24 @@ const Profile = () => {
     };
   
     return (
+      <div style={{ paddingTop: 65 }}>
+        <Header />
+
+        {errorMessage &&
+          <Alert severity="error" sx={{ display: "flex", alignItems: "center", height: "60px" }}>{errorMessage}</Alert>
+        }
+
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 200 }}>
-            <Header />
+          <Typography variant="h5" sx={{ marginBottom: "10px" }}>Profile</Typography>
 
-            <Typography variant="h5" sx={{ marginBottom: "10px" }}>Profile</Typography>
+          <TextField value={username} label="Username" sx={{ width: "400px", marginBottom: "10px" }} disabled />
+          <TextField value={email} label="Email" sx={{ width: "400px", marginBottom: "10px" }} disabled />
+          <TextField value={newEmail} label="Update email" onChange={handleEmailChange} sx={{ width: "400px", marginBottom: "10px" }} />
+          <TextField value={newPassword} label="Update password" onChange={handlePasswordChange} sx={{ width: "400px", marginBottom: "10px" }} type="password" />
 
-            <TextField value={username} label="Username" sx={{ width: "400px", marginBottom: "10px" }} disabled />
-            <TextField value={email} label="Email" sx={{ width: "400px", marginBottom: "10px" }} disabled />
-            <TextField value={newEmail} label="Update email" onChange={handleEmailChange} sx={{ width: "400px", marginBottom: "10px" }} />
-            <TextField value={newPassword} label="Update password" onChange={handlePasswordChange} sx={{ width: "400px", marginBottom: "10px" }} type="password" />
-
-            {errorMessage &&
-              <Alert severity="error" sx={{ display: "flex", alignItems: "center", height: "60px", marginBottom: "10px" }}>{errorMessage}</Alert>
-            }
-
-            <Button onClick={updateProfile}>Update</Button>
+          <Button onClick={updateProfile}>Update</Button>
         </div>
+      </div>
     );
 };
 

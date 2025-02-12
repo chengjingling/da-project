@@ -2,7 +2,7 @@ const connection = require("../config/database");
 
 const checkGroup = (username, groupName) => {
     return new Promise((resolve, reject) => {
-        connection.query("SELECT * FROM user_group WHERE username = ? AND groupName = ?", [username, groupName], (err, result) => {
+        connection.query("SELECT * FROM user_group WHERE user_group_username = ? AND user_group_groupName = ?", [username, groupName], (err, result) => {
             if (err) {
                 console.error("Error selecting user_group:", err);
                 reject(err);
@@ -13,14 +13,16 @@ const checkGroup = (username, groupName) => {
     });
 };
 
-const i_checkGroup = async (req, res, next) => {
-    const isAdmin = await checkGroup(req.user.username, "admin");
-    
-    if (isAdmin) {
-        next();
-    } else {
-        res.status(403).json({ message: "not admin" });
-    }
+const i_checkGroup = (group) => {
+    return async (req, res, next) => {
+        const userInGroup = await checkGroup(req.user.username, group);
+        
+        if (userInGroup) {
+            next();
+        } else {
+            res.status(403).json({ message: "No permission." });
+        }
+    };
 };
 
 module.exports = { i_checkGroup };

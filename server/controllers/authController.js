@@ -10,7 +10,7 @@ const login = async (req, res) => {
     connection.query("SELECT * FROM user_group WHERE user_group_username = ? AND user_group_groupName = 'admin'", [username], async (err, result) => {
         if (err) {
             console.error("Error selecting user group:", err);
-            res.status(500);
+            res.status(500).json({ message: "An error occurred, please try again." });
         } else if (result.length === 0) {
             group = "user";
         } else {
@@ -21,7 +21,7 @@ const login = async (req, res) => {
     connection.query("SELECT * FROM users WHERE user_username = ?", [username], async (err, result) => {
         if (err) {
             console.error("Error selecting user:", err);
-            res.status(500);
+            res.status(500).json({ message: "An error occurred, please try again." });
         } else if (result.length === 0) {
             res.status(401).json({ message: "Username or password is incorrect." });
         } else {
@@ -55,7 +55,7 @@ const logout = async (req, res) => {
     res
     .clearCookie("token")
     .status(200)
-    .json({ message: "logged out" });
+    .json({ message: "Logged out." });
 };
 
 const checkToken = async (req, res) => {
@@ -87,7 +87,7 @@ const checkAccountStatus = async (req, res) => {
         if (err) {
             console.error("Error selecting user:", err);
         } else {
-            res.status(200).json({ isEnabled: result[0].enabled });
+            res.status(200).json({ isEnabled: result[0].user_enabled });
         }
     });
 };
