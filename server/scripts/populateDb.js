@@ -40,4 +40,20 @@ connection.query("CREATE TABLE applications (app_acronym VARCHAR(20), app_rNumbe
     }
 });
 
+connection.query("CREATE TABLE plans (plan_appAcronym VARCHAR(20) NOT NULL, plan_mvpName VARCHAR(50), plan_startDate DATE, plan_endDate DATE, plan_color VARCHAR(7), PRIMARY KEY (plan_appAcronym, plan_mvpName), FOREIGN KEY (plan_appAcronym) REFERENCES applications(app_acronym))", (err, result) => {
+    if (err) {
+        console.error("Error creating plans table:", err);
+    } else {
+        console.log("plans table created");
+    }
+});
+
+connection.query("CREATE TABLE tasks (task_id VARCHAR(31), task_appAcronym VARCHAR(20) NOT NULL, task_plan VARCHAR(50), task_name VARCHAR(50) NOT NULL, task_description TEXT NOT NULL, task_notes LONGTEXT, task_state ENUM('Open', 'To-do', 'Doing', 'Done', 'Closed'), task_creator VARCHAR(50) NOT NULL, task_owner VARCHAR(50), task_createDate DATETIME NOT NULL, PRIMARY KEY (task_id), FOREIGN KEY (task_appAcronym) REFERENCES applications(app_acronym), FOREIGN KEY (task_appAcronym, task_plan) REFERENCES plans(plan_appAcronym, plan_mvpName))", (err, result) => {
+    if (err) {
+        console.error("Error creating tasks table:", err);
+    } else {
+        console.log("tasks table created");
+    }
+});
+
 process.exit();
