@@ -82,7 +82,7 @@ const createUser = async (req, res) => {
     }
 
     if (!usernameRegex.test(data.username)) {
-        return res.status(400).json({ message: "Username must be alphanumeric." });
+        return res.status(400).json({ message: "Username can only contain letters and numbers." });
     }
 
     if (!passwordRegex.test(data.password.trim())) {
