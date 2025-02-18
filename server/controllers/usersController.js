@@ -114,7 +114,7 @@ const createUser = async (req, res) => {
         if (err.code === "ER_DUP_ENTRY") {
             res.status(409).json({ message: "Username already exists." });
         } else {
-            console.error("Error creating user:". err);
+            console.error("Error creating user:", err);
             res.status(500).json({ message: "An error occurred, please try again." });
         }
     }

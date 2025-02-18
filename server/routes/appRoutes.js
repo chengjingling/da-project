@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { retrieveApps, createApp, updateApp, retrievePlans, createPlan, createTask } = require("../controllers/appController");
+const { retrieveApps, createApp, updateApp, retrievePlans, createPlan, retrieveTasks, retrieveTask, createTask, updateTask } = require("../controllers/appController");
 const { validateToken } = require("../middleware/validateToken");
 const { i_checkGroup } = require("../middleware/checkGroup");
 
@@ -14,6 +14,9 @@ router.post("/createApp", checkIfPl, createApp);
 router.put("/updateApp", checkIfPl, updateApp);
 router.get("/retrievePlans", retrievePlans);
 router.post("/createPlan", checkIfPm, createPlan);
+router.get("/retrieveTasks", retrieveTasks);
+router.get("/retrieveTask", retrieveTask);
 router.post("/createTask", checkIfPl, createTask);
+router.patch("/updateTask", updateTask);
 
 module.exports = router;

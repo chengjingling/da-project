@@ -4,41 +4,65 @@ import axios from "axios";
 import Header from "../components/Header";
 import { Alert, Typography, TextField, Box, Select, MenuItem, ListItemText, Button } from "@mui/material";
 
-const CreateTask = () => {
+const ViewTask = () => {
+    const [task, setTask] = useState({});
     const [plans, setPlans] = useState([]);
-    const [taskNameInput, setTaskNameInput] = useState("");
     const [planSelect, setPlanSelect] = useState("");
-    const [taskDescriptionInput, setTaskDescriptionInput] = useState("");
+    const [notes, setNotes] = useState("");
+    const [noteInput, setNoteInput] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
     
-    const { appAcronym } = useParams();
+    const { taskId, appAcronym } = useParams();
     const navigate = useNavigate();
 
-    const retrievePlans = async () => {
-        const response = await axios.get("http://localhost:8080/api/app/retrievePlans", { params: { appAcronym: appAcronym } });
-        setPlans(response.data.plans);
+    const retrieveTaskAndPlans = async () => {
+        const taskResponse = await axios.get("http://localhost:8080/api/app/retrieveTask", { params: { taskId: taskId } });
+        const plansResponse = await axios.get("http://localhost:8080/api/app/retrievePlans", { params: { appAcronym: appAcronym } });
+
+        const taskObject = taskResponse.data.task;
+        const plansArray = plansResponse.data.plans;
+
+        const notesArray = JSON.parse(`[${taskObject.task_notes}]`);
+
+        const formatDate = (date) => {
+            const d = new Date(date);
+
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, "0");
+            const day = String(d.getDate()).padStart(2, "0");
+            
+            const hours = String(d.getHours()).padStart(2, "0");
+            const minutes = String(d.getMinutes()).padStart(2, "0");
+            
+            return `${year}/${month}/${day} ${hours}:${minutes}`;
+        };
+        
+        const notesText = notesArray
+            .map(note => `${formatDate(note.date_posted)} (${note.creator}): ${note.text}`)
+            .join("\n");
+        
+        setTask(taskObject);
+        setPlans(plansArray);
+        setPlanSelect(taskObject.task_plan);
+        setNotes(notesText);
     };
 
     useEffect(() => {
-        retrievePlans();
+        retrieveTaskAndPlans();
     }, []);
-
-    const handleTaskNameChange = (event) => {
-        setTaskNameInput(event.target.value);
-    };
 
     const handlePlanChange = (event) => {
         setPlanSelect(event.target.value);
     };
 
-    const handleTaskDescriptionChange = (event) => {
-        setTaskDescriptionInput(event.target.value);
+    const handleNoteChange = (event) => {
+        setNoteInput(event.target.value);
     };
 
-    const createTask = async () => {
+    const updateTask = async () => {
         try {
-            const response = await axios.post("http://localhost:8080/api/app/createTask", { task_appAcronym: appAcronym, task_plan: planSelect, task_name: taskNameInput, task_description: taskDescriptionInput });
-            navigate(`/applications/${appAcronym}`);
+            const response = await axios.patch("http://localhost:8080/api/app/updateTask", { task_id: taskId, task_plan: planSelect, task_notes: task.task_notes, note: noteInput });
+            navigate(0);
         } catch (error) {
             if (error.response.status === 403) {
                 const response = await axios.get("http://localhost:8080/api/auth/logout");
@@ -63,9 +87,9 @@ const CreateTask = () => {
 
                     <div style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
                         <Typography sx={{ marginRight: "10px" }}>Name:</Typography>
-                        <TextField value={taskNameInput} onChange={handleTaskNameChange} />
+                        <TextField value={task.task_name} disabled />
                         <Box sx={{ flexGrow: 1 }} />
-                        <Typography>State: Open</Typography>
+                        <Typography>State: {task.task_state}</Typography>
                     </div>
 
                     <Typography style={{ marginBottom: "10px" }}>App: {appAcronym}</Typography>
@@ -86,23 +110,23 @@ const CreateTask = () => {
                     </div>
 
                     <Typography>Description:</Typography>
-                    <textarea value={taskDescriptionInput} onChange={handleTaskDescriptionChange} style={{ width: "800px", height: "300px" }}></textarea>
+                    <textarea value={task.task_description} style={{ width: "800px", height: "300px" }} disabled></textarea>
                 </div>
 
                 <div style={{ marginTop: "auto" }}>
                     <Typography>Notes history:</Typography>
-                    <textarea style={{ width: "600px", height: "320px" }} disabled></textarea>
+                    <textarea value={notes} style={{ width: "600px", height: "320px" }} disabled></textarea>
                     <Typography>Enter note:</Typography>
-                    <textarea style={{ width: "600px", height: "100px" }} disabled></textarea>
+                    <textarea onChange={handleNoteChange} style={{ width: "600px", height: "100px" }}></textarea>
                 </div>
             </div>
 
             <div style={{ display: "flex", width: "1510px" }}>
                 <Box sx={{ flexGrow: 1 }} />
-                <Button onClick={createTask}>Create</Button>
+                <Button onClick={updateTask}>Save changes</Button>
             </div>
         </div>
     );
 };
 
-export default CreateTask;
+export default ViewTask;

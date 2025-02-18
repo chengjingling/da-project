@@ -14,8 +14,12 @@ const retrieveApps = (req, res) => {
 const createApp = (req, res) => {
     const data = req.body;
 
-    if (data.app_acronym ==="") {
+    if (data.app_acronym === "") {
         return res.status(400).json({ message: "Acronym cannot be blank." });
+    }
+
+    if (data.app_acronym.length > 50) {
+        return res.status(400).json({ message: "Acronym cannot be more than 50 characters." });
     }
 
     connection.query("INSERT INTO applications SET ?", data, (err) => {
@@ -25,7 +29,7 @@ const createApp = (req, res) => {
             } else if (err.code === "ER_TRUNCATED_WRONG_VALUE_FOR_FIELD") {
                 res.status(400).json({ message: "R. number must be an integer." });
             } else {
-                console.error("Error inserting application:". err);
+                console.error("Error inserting application:", err);
                 res.status(500).json({ message: "An error occurred, please try again." });
             }
         } else {
@@ -48,7 +52,9 @@ const updateApp = (req, res) => {
 };
 
 const retrievePlans = (req, res) => {
-    connection.query("SELECT * FROM plans", (err, plans) => {
+    const { appAcronym } = req.query;
+    
+    connection.query("SELECT * FROM plans WHERE plan_appAcronym = ?", [appAcronym], (err, plans) => {
         if (err) {
             console.error("Error selecting plans:", err);
             res.status(500).json({ message: "An error occurred, please try again." });
@@ -89,7 +95,7 @@ const createPlan = (req, res) => {
             if (err.code === "ER_DUP_ENTRY") {
                 res.status(409).json({ message: "MVP name already exists." });
             } else {
-                console.error("Error inserting plan:". err);
+                console.error("Error inserting plan:", err);
                 res.status(500).json({ message: "An error occurred, please try again." });
             }
         } else {
@@ -98,10 +104,44 @@ const createPlan = (req, res) => {
     });
 };
 
+const retrieveTasks = (req, res) => {
+    const { appAcronym } = req.query;
+    
+    connection.query("SELECT * FROM tasks WHERE task_appAcronym = ?", [appAcronym], (err, tasks) => {
+        if (err) {
+            console.error("Error selecting tasks:", err);
+            res.status(500).json({ message: "An error occurred, please try again." });
+        } else {
+            res.status(200).json({ tasks: tasks });
+        }
+    });
+};
+
+const retrieveTask = (req, res) => {
+    const { taskId } = req.query;
+    
+    connection.query("SELECT * FROM tasks WHERE task_id = ?", [taskId], (err, tasks) => {
+        if (err) {
+            console.error("Error selecting task:", err);
+            res.status(500).json({ message: "An error occurred, please try again." });
+        } else {
+            res.status(200).json({ task: tasks[0] });
+        }
+    });
+};
+
 const createTask = async (req, res) => {
     const data = req.body;
+    
+    if (data.task_name === "") {
+        return res.status(400).json({ message: "Name cannot be blank." });
+    }
 
-    try{
+    if (data.task_name.length > 50) {
+        return res.status(400).json({ message: "Name cannot be more than 50 characters." });
+    }
+
+    try {
         const lastRNumberResult = await connection.promise().query(
             "SELECT MAX(SUBSTRING(task_id, LENGTH(task_appAcronym) + 2)) AS lastRNumber FROM tasks"
         );
@@ -119,6 +159,10 @@ const createTask = async (req, res) => {
             data.task_id = data.task_appAcronym + "_" + appResult[0][0].app_rNumber;
         }
 
+        if (data.task_plan === "") {
+            delete data.task_plan;
+        }
+
         data.task_state = "Open";
         data.task_creator = req.user.username;
         data.task_owner = req.user.username;
@@ -131,9 +175,30 @@ const createTask = async (req, res) => {
         
         res.status(201).json({ message: "Task created." });
     } catch (err) {
-        console.error("Error creating task:". err);
+        console.error("Error creating task:", err);
         res.status(500).json({ message: "An error occurred, please try again." });
     }
 };
 
-module.exports = { retrieveApps, createApp, updateApp, retrievePlans, createPlan, createTask };
+const updateTask = (req, res) => {
+    const data = req.body;
+    
+    if (data.note !== "") {
+        if (data.task_notes !== "") {
+            data.task_notes += ", ";
+        }
+
+        data.task_notes += `{"text": "${data.note}", "date_posted": "${new Date()}", "creator": "${req.user.username}", "type": "written"}`;
+    }
+
+    connection.query("UPDATE tasks SET task_plan = ?, task_notes = ? WHERE task_id = ?", [data.task_plan, data.task_notes, data.task_id], (err) => {
+        if (err) {
+            console.error("Error updating task:", err);
+            res.status(500).json({ message: "An error occurred, please try again." });
+        } else {
+            res.status(200).json({ message: "Task updated." });
+        }
+    });
+};
+
+module.exports = { retrieveApps, createApp, updateApp, retrievePlans, createPlan, retrieveTasks, retrieveTask, createTask, updateTask };
