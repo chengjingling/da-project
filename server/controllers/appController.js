@@ -1,4 +1,5 @@
 const connection = require("../config/database");
+const transporter = require("../config/mail");
 
 const retrieveApps = (req, res) => {
     connection.query("SELECT * FROM applications", (err, apps) => {
@@ -14,12 +15,18 @@ const retrieveApps = (req, res) => {
 const createApp = (req, res) => {
     const data = req.body;
 
+    const acronymRegex = /^[a-zA-Z0-9]+$/;
+
     if (data.app_acronym === "") {
         return res.status(400).json({ message: "Acronym cannot be blank." });
     }
 
     if (data.app_acronym.length > 50) {
         return res.status(400).json({ message: "Acronym cannot be more than 50 characters." });
+    }
+
+    if (!acronymRegex.test(data.app_acronym)) {
+        return res.status(400).json({ message: "Acronym can only contain letters and numbers." });
     }
 
     connection.query("INSERT INTO applications SET ?", data, (err) => {
@@ -67,7 +74,7 @@ const retrievePlans = (req, res) => {
 const createPlan = (req, res) => {
     const data = req.body;
 
-    const mvpNameRegex = /^[a-zA-Z0-9 ]*$/;
+    const mvpNameRegex = /^[a-zA-Z0-9 ]+$/;
     
     if (data.plan_mvpName === "") {
         return res.status(400).json({ message: "MVP name cannot be blank." });
@@ -180,25 +187,127 @@ const createTask = async (req, res) => {
     }
 };
 
-const updateTask = (req, res) => {
+const updateTaskState = async (req, res) => {
     const data = req.body;
-    
-    if (data.note !== "") {
-        if (data.task_notes !== "") {
-            data.task_notes += ", ";
-        }
 
-        data.task_notes += `{"text": "${data.note}", "date_posted": "${new Date()}", "creator": "${req.user.username}", "type": "written"}`;
+    let newState;
+    let message;
+    
+    if (data.buttonPressed === "Release task") {
+        newState = "To-do";
+        message = "Task released";
+    } else if (data.buttonPressed === "Work on task") {
+        newState = "Doing";
+        message = "Working on task";
+    } else if (data.buttonPressed === "Return task to to-do list") {
+        newState = "To-do";
+        message = "Task returned to to-do list";
+    } else if (data.buttonPressed === "Seek approval") {
+        newState = "Done";
+        message = "Seeking approval";
+    } else if (data.buttonPressed === "Request for deadline extension") {
+        newState = "Done";
+        message = "Requesting for deadline extension";
+    } else if (data.buttonPressed === "Reject task") {
+        newState = "Doing";
+        message = "Task rejected";
+    } else if (data.buttonPressed === "Approve task") {
+        newState = "Closed";
+        message = "Task approved";
     }
 
-    connection.query("UPDATE tasks SET task_plan = ?, task_notes = ? WHERE task_id = ?", [data.task_plan, data.task_notes, data.task_id], (err) => {
-        if (err) {
-            console.error("Error updating task:", err);
-            res.status(500).json({ message: "An error occurred, please try again." });
-        } else {
-            res.status(200).json({ message: "Task updated." });
+    try {
+        const [taskResults] = await connection.promise().query(
+            "SELECT * FROM tasks WHERE task_id = ?",
+            [data.task_id]
+        );
+
+        let notes = taskResults[0].task_notes;
+        let oldState = taskResults[0].task_state;
+        
+        if (notes !== "") {
+            notes += ", ";
         }
-    });
+
+        notes += `{"text": "${oldState} >> ${newState} (${message})", "date_posted": "${new Date()}", "creator": "~system~", "type": "system"}`;
+
+        await connection.promise().query(
+            "UPDATE tasks SET task_notes = ?, task_state = ?, task_owner = ? WHERE task_id = ?", 
+            [notes, newState, req.user.username, data.task_id]
+        );
+
+        // await transporter.sendMail({
+        //     from: '"Cheng Jingling" <chengjingling@gmail.com>',
+        //     to: "jinging1807@gmail.com",
+        //     subject: `${oldState} >> ${newState} (${message})`,
+        //     html: `<p>${oldState} >> ${newState} (${message})</p>`,
+        // });
+
+        res.status(200).json({ message: "Task state updated." });
+    } catch (err) {
+        console.error("Error updating task state:", err);
+        res.status(500).json({ message: "An error occurred, please try again." });
+    }
 };
 
-module.exports = { retrieveApps, createApp, updateApp, retrievePlans, createPlan, retrieveTasks, retrieveTask, createTask, updateTask };
+const updateTaskPlan = async (req, res) => {
+    const data = req.body;
+
+    try {
+        const [taskResults] = await connection.promise().query(
+            "SELECT * FROM tasks WHERE task_id = ?",
+            [data.task_id]
+        );
+
+        if (taskResults[0].task_plan !== data.task_plan) {
+            let notes = taskResults[0].task_notes;
+        
+            if (notes !== "") {
+                notes += ", ";
+            }
+
+            notes += `{"text": "Plan changed from ${taskResults[0].task_plan} to ${data.task_plan}", "date_posted": "${new Date()}", "creator": "~system~", "type": "system"}`;
+
+            await connection.promise().query(
+                "UPDATE tasks SET task_plan = ?, task_notes = ?, task_owner = ? WHERE task_id = ?", 
+                [data.task_plan, notes, req.user.username, data.task_id]
+            );
+        }
+
+        res.status(200).json({ message: "Task plan updated." });
+    } catch (err) {
+        console.error("Error updating task plan:", err);
+        res.status(500).json({ message: "An error occurred, please try again." });
+    }
+};
+
+const updateTaskNotes = async (req, res) => {
+    const data = req.body;
+
+    try {
+        const [taskResults] = await connection.promise().query(
+            "SELECT * FROM tasks WHERE task_id = ?",
+            [data.task_id]
+        );
+
+        let notes = taskResults[0].task_notes;
+    
+        if (notes !== "") {
+            notes += ", ";
+        }
+
+        notes += `{"text": "${data.note}", "date_posted": "${new Date()}", "creator": "${req.user.username}", "type": "written"}`;
+
+        await connection.promise().query(
+            "UPDATE tasks SET task_notes = ?, task_owner = ? WHERE task_id = ?", 
+            [notes, req.user.username, data.task_id]
+        );
+
+        res.status(200).json({ message: "Task notes updated." });
+    } catch (err) {
+        console.error("Error updating task notes:", err);
+        res.status(500).json({ message: "An error occurred, please try again." });
+    }
+};
+
+module.exports = { retrieveApps, createApp, updateApp, retrievePlans, createPlan, retrieveTasks, retrieveTask, createTask, updateTaskState, updateTaskPlan, updateTaskNotes };

@@ -17,8 +17,8 @@ const Users = () => {
 
   const navigate = useNavigate();
 
-  const checkPermission = async () => {
-    const response = await axios.get("http://localhost:8080/api/auth/checkPermission");
+  const checkIfAdmin = async () => {
+    const response = await axios.get("http://localhost:8080/api/auth/checkIfAdmin");
     
     if (!response.data.isAdmin) {
       const response = await axios.get("http://localhost:8080/api/auth/logout");
@@ -46,7 +46,7 @@ const Users = () => {
   };
 
   useEffect(() => {
-    checkPermission();
+    checkIfAdmin();
     checkAccountStatus();
     retrieveUsersAndGroups();
   }, []);

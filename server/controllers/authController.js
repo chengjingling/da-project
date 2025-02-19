@@ -68,7 +68,7 @@ const checkToken = async (req, res) => {
     }
 };
 
-const checkPermission = async (req, res) => {
+const checkIfAdmin = async (req, res) => {
     connection.query("SELECT * FROM user_group WHERE user_group_username = ? AND user_group_groupName = 'admin'", [req.user.username], (err, result) => {
         if (err) {
             console.error("Error selecting user_group:", err);
@@ -92,4 +92,44 @@ const checkAccountStatus = async (req, res) => {
     });
 };
 
-module.exports = { login, logout, checkToken, checkPermission, checkAccountStatus };
+const checkPermits = async (req, res) => {
+    try {
+        const [userGroupsResults] = await connection.promise().query(
+            "SELECT * FROM user_group WHERE user_group_username = ?", 
+            [req.user.username]
+        );
+        
+        const userGroups = userGroupsResults.map(group => group.user_group_groupName);
+
+        const [appPermitsResults] = await connection.promise().query(
+            "SELECT * FROM applications WHERE app_acronym = ?", 
+            [req.query.appAcronym]
+        );
+
+        const appPermits = {
+            "Create": appPermitsResults[0].app_permitCreate,
+            "Open": appPermitsResults[0].app_permitOpen,
+            "To-do": appPermitsResults[0].app_permitToDoList,
+            "Doing": appPermitsResults[0].app_permitDoing,
+            "Done": appPermitsResults[0].app_permitDone
+        };
+        
+        const permits = Object.entries(appPermits)
+            .filter(([key, value]) => userGroups.includes(value))
+            .map(([key, value]) => key);
+
+        const [taskResults] = await connection.promise().query(
+            "SELECT * FROM tasks WHERE task_id = ?",
+            [req.query.taskId]
+        );
+
+        const hasPermission = permits.includes(taskResults[0].task_state);
+
+        res.status(200).json({ permits: permits, hasPermission: hasPermission });
+    } catch (err) {
+        console.error("Error checking permits:", err);
+        res.status(500).json({ message: "An error occurred, please try again." });
+    }
+};
+
+module.exports = { login, logout, checkToken, checkIfAdmin, checkAccountStatus, checkPermits };

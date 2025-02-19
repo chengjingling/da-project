@@ -25,4 +25,4 @@ const i_checkGroup = (group) => {
     };
 };
 
-module.exports = { i_checkGroup };
+module.exports = { checkGroup, i_checkGroup };

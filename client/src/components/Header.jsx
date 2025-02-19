@@ -10,14 +10,14 @@ const Header = () => {
 
   const navigate = useNavigate();
 
-  const checkPermission = async () => {
-    const response = await axios.get("http://localhost:8080/api/auth/checkPermission");
+  const checkIfAdmin = async () => {
+    const response = await axios.get("http://localhost:8080/api/auth/checkIfAdmin");
     setIsAdmin(response.data.isAdmin);
     setUsername(response.data.username);
   };
 
   useEffect(() => {
-    checkPermission();
+    checkIfAdmin();
   }, []);
 
   const logout = async () => {

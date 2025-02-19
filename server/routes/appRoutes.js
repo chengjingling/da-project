@@ -1,22 +1,25 @@
 const express = require("express");
 const router = express.Router();
-const { retrieveApps, createApp, updateApp, retrievePlans, createPlan, retrieveTasks, retrieveTask, createTask, updateTask } = require("../controllers/appController");
+const { retrieveApps, createApp, updateApp, retrievePlans, createPlan, retrieveTasks, retrieveTask, createTask, updateTaskState, updateTaskPlan, updateTaskNotes } = require("../controllers/appController");
 const { validateToken } = require("../middleware/validateToken");
 const { i_checkGroup } = require("../middleware/checkGroup");
+const { checkPermit } = require("../middleware/checkPermit");
 
 router.use(validateToken);
 
-const checkIfPl = i_checkGroup("project_lead");
-const checkIfPm = i_checkGroup("project_manager");
+const checkIfHardcodedPl = i_checkGroup("hardcoded_pl");
+const checkIfHardcodedPm = i_checkGroup("hardcoded_pm");
 
 router.get("/retrieveApps", retrieveApps);
-router.post("/createApp", checkIfPl, createApp);
-router.put("/updateApp", checkIfPl, updateApp);
+router.post("/createApp", checkIfHardcodedPl, createApp);
+router.put("/updateApp", checkIfHardcodedPl, updateApp);
 router.get("/retrievePlans", retrievePlans);
-router.post("/createPlan", checkIfPm, createPlan);
+router.post("/createPlan", checkIfHardcodedPm, createPlan);
 router.get("/retrieveTasks", retrieveTasks);
 router.get("/retrieveTask", retrieveTask);
-router.post("/createTask", checkIfPl, createTask);
-router.patch("/updateTask", updateTask);
+router.post("/createTask", checkIfHardcodedPl, createTask);
+router.patch("/updateTaskState", checkPermit, updateTaskState);
+router.patch("/updateTaskPlan", checkPermit, updateTaskPlan);
+router.patch("/updateTaskNotes", checkPermit, updateTaskNotes);
 
 module.exports = router;

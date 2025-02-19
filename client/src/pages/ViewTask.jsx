@@ -5,6 +5,8 @@ import Header from "../components/Header";
 import { Alert, Typography, TextField, Box, Select, MenuItem, ListItemText, Button } from "@mui/material";
 
 const ViewTask = () => {
+    const [permits, setPermits] = useState([]);
+    const [hasPermission, setHasPermission] = useState(false);
     const [task, setTask] = useState({});
     const [plans, setPlans] = useState([]);
     const [planSelect, setPlanSelect] = useState("");
@@ -14,6 +16,12 @@ const ViewTask = () => {
     
     const { taskId, appAcronym } = useParams();
     const navigate = useNavigate();
+
+    const checkPermits = async () => {
+        const response = await axios.get("http://localhost:8080/api/auth/checkPermits", { params: { appAcronym: appAcronym, taskId: taskId } });
+        setPermits(response.data.permits);
+        setHasPermission(response.data.hasPermission);
+    };
 
     const retrieveTaskAndPlans = async () => {
         const taskResponse = await axios.get("http://localhost:8080/api/app/retrieveTask", { params: { taskId: taskId } });
@@ -30,7 +38,7 @@ const ViewTask = () => {
             const year = d.getFullYear();
             const month = String(d.getMonth() + 1).padStart(2, "0");
             const day = String(d.getDate()).padStart(2, "0");
-            
+
             const hours = String(d.getHours()).padStart(2, "0");
             const minutes = String(d.getMinutes()).padStart(2, "0");
             
@@ -48,6 +56,7 @@ const ViewTask = () => {
     };
 
     useEffect(() => {
+        checkPermits();
         retrieveTaskAndPlans();
     }, []);
 
@@ -59,9 +68,20 @@ const ViewTask = () => {
         setNoteInput(event.target.value);
     };
 
-    const updateTask = async () => {
+    const updateTask = async (buttonPressed) => {
         try {
-            const response = await axios.patch("http://localhost:8080/api/app/updateTask", { task_id: taskId, task_plan: planSelect, task_notes: task.task_notes, note: noteInput });
+            if (buttonPressed !== "Save changes") {
+                const updateStateResponse = await axios.patch("http://localhost:8080/api/app/updateTaskState", { task_id: taskId, buttonPressed: buttonPressed, appAcronym: appAcronym });
+            }
+
+            if (task.task_state === "Open" || task.task_state === "Done") {
+                const updatePlanResponse = await axios.patch("http://localhost:8080/api/app/updateTaskPlan", { task_id: taskId, task_plan: planSelect, appAcronym: appAcronym });
+            }
+
+            if (noteInput !== "") {
+                const updateNotesResponse = await axios.patch("http://localhost:8080/api/app/updateTaskNotes", { task_id: taskId, note: noteInput, appAcronym: appAcronym });
+            }
+
             navigate(0);
         } catch (error) {
             if (error.response.status === 403) {
@@ -100,6 +120,12 @@ const ViewTask = () => {
                             value={planSelect}
                             onChange={handlePlanChange}
                             sx={{ marginLeft: "10px", width: "150px" }}
+                            disabled={
+                                !(
+                                    (task.task_state === "Open" && permits.includes("Open")) || 
+                                    (task.task_state === "Done" && permits.includes("Done"))
+                                )
+                            }
                         >
                             {plans.map((plan) => (
                                 <MenuItem key={plan.plan_mvpName} value={plan.plan_mvpName}>
@@ -117,13 +143,37 @@ const ViewTask = () => {
                     <Typography>Notes history:</Typography>
                     <textarea value={notes} style={{ width: "600px", height: "320px" }} disabled></textarea>
                     <Typography>Enter note:</Typography>
-                    <textarea onChange={handleNoteChange} style={{ width: "600px", height: "100px" }}></textarea>
+                    <textarea onChange={handleNoteChange} style={{ width: "600px", height: "100px" }} disabled={!hasPermission}></textarea>
                 </div>
             </div>
 
             <div style={{ display: "flex", width: "1510px" }}>
+                {task.task_state === "Open" && permits.includes("Open") &&
+                    <Button onClick={() => updateTask("Release task")}>Release task</Button>
+                }
+
+                {task.task_state === "To-do" && permits.includes("To-do") &&
+                    <Button onClick={() => updateTask("Work on task")}>Work on task</Button>
+                }
+
+                {task.task_state === "Doing" && permits.includes("Doing") &&
+                    <div>
+                        <Button onClick={() => updateTask("Return task to to-do list")}>Return task to to-do list</Button>
+                        <Button onClick={() => updateTask("Seek approval")}>Seek approval</Button>
+                        <Button onClick={() => updateTask("Request for deadline extension")}>Request for deadline extension</Button>
+                    </div>
+                }
+
+                {task.task_state === "Done" && permits.includes("Done") &&
+                    <div>
+                        <Button onClick={() => updateTask("Reject task")}>Reject task</Button>
+                        <Button onClick={() => updateTask("Approve task")}>Approve task</Button>
+                    </div>
+                }
+
                 <Box sx={{ flexGrow: 1 }} />
-                <Button onClick={updateTask}>Save changes</Button>
+
+                <Button onClick={() => updateTask("Save changes")}>Save changes</Button>
             </div>
         </div>
     );

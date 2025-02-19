@@ -93,7 +93,7 @@ const TaskBoard = () => {
 
             <div style={{ display: "flex", justifyContent: "space-evenly" }}>
                 {taskStates.map(state => (
-                    <div key={state} style={{ border: "1px solid black", padding: "10px" }}>
+                    <div key={state} style={{ border: "2px solid #ccc", padding: "10px" }}>
                         <Typography variant="h5">{state}</Typography>
                         {tasks[state]?.length === 0 ? (
                             <div style={{ width: "200px", marginTop: "10px" }}>
@@ -101,7 +101,7 @@ const TaskBoard = () => {
                             </div>
                         ) : (
                             tasks[state]?.map(task => (
-                                <div key={task.task_id} onClick={() => navigate(`/applications/${appAcronym}/${task.task_id}`)} style={{ border: task.task_plan ? `1px solid ${plans[task.task_plan].plan_color}` : "1px solid black", padding: "10px", width: "200px", marginTop: "10px", cursor: "pointer" }}>
+                                <div key={task.task_id} onClick={() => navigate(`/applications/${appAcronym}/${task.task_id}`)} style={{ border: task.task_plan ? `2px solid ${plans[task.task_plan].plan_color}` : "2px solid #ccc", padding: "10px", width: "200px", marginTop: "10px", cursor: "pointer" }}>
                                     {task.task_plan ? (
                                         <Typography>{task.task_plan}</Typography>
                                     ) : (
