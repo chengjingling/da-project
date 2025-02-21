@@ -40,12 +40,7 @@ const CreateTask = () => {
             const response = await axios.post("http://localhost:8080/api/app/createTask", { task_appAcronym: appAcronym, task_plan: planSelect, task_name: taskNameInput, task_description: taskDescriptionInput });
             navigate(`/applications/${appAcronym}`);
         } catch (error) {
-            if (error.response.status === 403) {
-                const response = await axios.get("http://localhost:8080/api/auth/logout");
-                navigate("/");
-            } else {
-                setErrorMessage(error.response.data.message);
-            }
+            setErrorMessage(error.response.data.message);
         }
     };
 

@@ -10,6 +10,8 @@ import { DemoContainer } from "@mui/x-date-pickers/internals/demo";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 
 const TaskBoard = () => {
+    const [isHardcodedPm, setIsHardcodedPm] = useState(false);
+    const [permits, setPermits] = useState([]);
     const taskStates = ["Open", "To-do", "Doing", "Done", "Closed"];
     const [tasks, setTasks] = useState({});
     const [plans, setPlans] = useState({});
@@ -20,6 +22,16 @@ const TaskBoard = () => {
     
     const { appAcronym } = useParams();
     const navigate = useNavigate();
+
+    const checkIfHardcodedPm = async () => {
+      const response = await axios.get("http://localhost:8080/api/auth/checkGroup", { params: { group: "hardcoded_pm" } });
+      setIsHardcodedPm(response.data.hasPermission);
+    };
+
+    const checkPermits = async () => {
+        const response = await axios.get("http://localhost:8080/api/auth/checkPermits", { params: { appAcronym: appAcronym } });
+        setPermits(response.data.permits);
+    };
 
     const retrieveTasksAndPlans = async () => {
         const tasksResponse = await axios.get("http://localhost:8080/api/app/retrieveTasks", { params: { appAcronym: appAcronym } });
@@ -40,6 +52,8 @@ const TaskBoard = () => {
     };
 
     useEffect(() => {
+        checkIfHardcodedPm();
+        checkPermits();
         retrieveTasksAndPlans();
     }, []);
 
@@ -52,12 +66,7 @@ const TaskBoard = () => {
             const response = await axios.post("http://localhost:8080/api/app/createPlan", { plan_appAcronym: appAcronym, plan_mvpName: mvpNameInput, plan_startDate: startDatePicker.toISOString().split("T")[0], plan_endDate: endDatePicker.toISOString().split("T")[0] });
             navigate(0);
         } catch (error) {
-            if (error.response.status === 403) {
-                const response = await axios.get("http://localhost:8080/api/auth/logout");
-                navigate("/");
-            } else {
-                setErrorMessage(error.response.data.message);
-            }
+            setErrorMessage(error.response.data.message);
         }
     };
   
@@ -69,26 +78,32 @@ const TaskBoard = () => {
                 <Alert severity="error" sx={{ display: "flex", alignItems: "center", height: "60px" }}>{errorMessage}</Alert>
             }
 
-            <NavLink to={"/applications/"} style={{ marginLeft: "10px" }}>Back</NavLink>
+            <NavLink to={"/applications"} style={{ marginLeft: "10px" }}>Back</NavLink>
 
             <Typography variant="h4" sx={{ marginLeft: "10px", marginTop: "20px" }}>Task Board - {appAcronym}</Typography>
         
             <div style={{ display: "flex", alignItems: "center", marginLeft: "10px", marginRight: "20px", marginBottom: "10px" }}>
-                Plan:
-                <TextField value={mvpNameInput} onChange={handleMvpNameChange} label="MVP name" sx={{ marginLeft: "10px" }} />
-                <LocalizationProvider dateAdapter={AdapterDayjs}>
-                    <DemoContainer components={["DatePicker"]} sx={{ marginBottom: "8px" }}>
-                        <DatePicker value={startDatePicker} onChange={(value) => setStartDatePicker(value)} label="Start date" />
-                    </DemoContainer>
-                </LocalizationProvider>
-                <LocalizationProvider dateAdapter={AdapterDayjs}>
-                    <DemoContainer components={["DatePicker"]} sx={{ marginBottom: "8px" }}>
-                        <DatePicker value={endDatePicker} onChange={(value) => setEndDatePicker(value)} label="End date" />
-                    </DemoContainer>
-                </LocalizationProvider>
-                <Button onClick={createPlan}>Create</Button>
+                {isHardcodedPm &&
+                    <div style={{ display: "flex", alignItems: "center" }}>
+                        Plan:
+                        <TextField value={mvpNameInput} onChange={handleMvpNameChange} label="MVP name" sx={{ marginLeft: "10px" }} />
+                        <LocalizationProvider dateAdapter={AdapterDayjs}>
+                            <DemoContainer components={["DatePicker"]} sx={{ marginBottom: "8px" }}>
+                                <DatePicker value={startDatePicker} onChange={(value) => setStartDatePicker(value)} label="Start date" />
+                            </DemoContainer>
+                        </LocalizationProvider>
+                        <LocalizationProvider dateAdapter={AdapterDayjs}>
+                            <DemoContainer components={["DatePicker"]} sx={{ marginBottom: "8px" }}>
+                                <DatePicker value={endDatePicker} onChange={(value) => setEndDatePicker(value)} label="End date" />
+                            </DemoContainer>
+                        </LocalizationProvider>
+                        <Button onClick={createPlan}>Create</Button>
+                    </div>
+                }
                 <Box sx={{ flexGrow: 1 }} />
-                <NavLink to={`/applications/${appAcronym}/createTask`}>Create task</NavLink>
+                {permits.includes("Create") &&
+                    <NavLink to={`/applications/${appAcronym}/createTask`}>Create task</NavLink>
+                }
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-evenly" }}>

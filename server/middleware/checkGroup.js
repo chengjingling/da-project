@@ -20,7 +20,7 @@ const i_checkGroup = (group) => {
         if (userInGroup) {
             next();
         } else {
-            res.status(403).json({ message: "No permission." });
+            res.status(403).json({ message: "You are not permitted to perform this action." });
         }
     };
 };

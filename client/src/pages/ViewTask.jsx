@@ -31,7 +31,8 @@ const ViewTask = () => {
         const plansArray = plansResponse.data.plans;
 
         const notesArray = JSON.parse(`[${taskObject.task_notes}]`);
-
+        const reversedNotesArray = notesArray.reverse();
+        
         const formatDate = (date) => {
             const d = new Date(date);
 
@@ -45,7 +46,7 @@ const ViewTask = () => {
             return `${year}/${month}/${day} ${hours}:${minutes}`;
         };
         
-        const notesText = notesArray
+        const notesText = reversedNotesArray
             .map(note => `${formatDate(note.date_posted)} (${note.creator}): ${note.text}`)
             .join("\n");
         
@@ -70,26 +71,21 @@ const ViewTask = () => {
 
     const updateTask = async (buttonPressed) => {
         try {
-            if (buttonPressed !== "Save changes") {
-                const updateStateResponse = await axios.patch("http://localhost:8080/api/app/updateTaskState", { task_id: taskId, buttonPressed: buttonPressed, appAcronym: appAcronym });
+            if (noteInput !== "") {
+                const updateNotesResponse = await axios.patch("http://localhost:8080/api/app/updateTaskNotes", { task_id: taskId, note: noteInput, appAcronym: appAcronym });
             }
 
             if (task.task_state === "Open" || task.task_state === "Done") {
                 const updatePlanResponse = await axios.patch("http://localhost:8080/api/app/updateTaskPlan", { task_id: taskId, task_plan: planSelect, appAcronym: appAcronym });
             }
 
-            if (noteInput !== "") {
-                const updateNotesResponse = await axios.patch("http://localhost:8080/api/app/updateTaskNotes", { task_id: taskId, note: noteInput, appAcronym: appAcronym });
+            if (buttonPressed !== "Save changes") {
+                const updateStateResponse = await axios.patch("http://localhost:8080/api/app/updateTaskState", { task_id: taskId, buttonPressed: buttonPressed, appAcronym: appAcronym });
             }
 
             navigate(0);
         } catch (error) {
-            if (error.response.status === 403) {
-                const response = await axios.get("http://localhost:8080/api/auth/logout");
-                navigate("/");
-            } else {
-                setErrorMessage(error.response.data.message);
-            }
+            setErrorMessage(error.response.data.message);
         }
     };
 
@@ -107,7 +103,7 @@ const ViewTask = () => {
 
                     <div style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
                         <Typography sx={{ marginRight: "10px" }}>Name:</Typography>
-                        <TextField value={task.task_name} disabled />
+                        <TextField value={task.task_name || ""} disabled />
                         <Box sx={{ flexGrow: 1 }} />
                         <Typography>State: {task.task_state}</Typography>
                     </div>

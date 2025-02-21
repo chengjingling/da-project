@@ -68,15 +68,15 @@ const checkToken = async (req, res) => {
     }
 };
 
-const checkIfAdmin = async (req, res) => {
-    connection.query("SELECT * FROM user_group WHERE user_group_username = ? AND user_group_groupName = 'admin'", [req.user.username], (err, result) => {
+const checkGroup = async (req, res) => {
+    connection.query("SELECT * FROM user_group WHERE user_group_username = ? AND user_group_groupName = ?", [req.user.username, req.query.group], (err, result) => {
         if (err) {
             console.error("Error selecting user_group:", err);
         } else {
             if (result.length > 0) {
-                res.status(200).json({ isAdmin: true, username: req.user.username });
+                res.status(200).json({ hasPermission: true, username: req.user.username });
             } else {
-                res.status(200).json({ isAdmin: false, username: req.user.username });
+                res.status(200).json({ hasPermission: false, username: req.user.username });
             }
         }
     });
@@ -117,19 +117,23 @@ const checkPermits = async (req, res) => {
         const permits = Object.entries(appPermits)
             .filter(([key, value]) => userGroups.includes(value))
             .map(([key, value]) => key);
+        
+        if (req.query.taskId) {
+            const [taskResults] = await connection.promise().query(
+                "SELECT * FROM tasks WHERE task_id = ?",
+                [req.query.taskId]
+            );
 
-        const [taskResults] = await connection.promise().query(
-            "SELECT * FROM tasks WHERE task_id = ?",
-            [req.query.taskId]
-        );
+            const hasPermission = permits.includes(taskResults[0].task_state);
 
-        const hasPermission = permits.includes(taskResults[0].task_state);
-
-        res.status(200).json({ permits: permits, hasPermission: hasPermission });
+            res.status(200).json({ permits: permits, hasPermission: hasPermission });
+        } else {
+            res.status(200).json({ permits: permits });
+        }
     } catch (err) {
         console.error("Error checking permits:", err);
         res.status(500).json({ message: "An error occurred, please try again." });
     }
 };
 
-module.exports = { login, logout, checkToken, checkIfAdmin, checkAccountStatus, checkPermits };
+module.exports = { login, logout, checkToken, checkGroup, checkAccountStatus, checkPermits };

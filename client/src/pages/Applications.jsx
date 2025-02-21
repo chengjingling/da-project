@@ -10,8 +10,9 @@ import { DemoContainer } from "@mui/x-date-pickers/internals/demo";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 
 const Applications = () => {
-    const [apps, setApps] = useState([]);
-    const [groups, setGroups] = useState([]);
+    const [isHardcodedPl, setIsHardcodedPl] = useState(false);
+    const [apps, setApps] = useState(undefined);
+    const [groups, setGroups] = useState(undefined);
     const [acronymInput, setAcronymInput] = useState("");
     const [rNumberInput, setRNumberInput] = useState("");
     const [descriptionInput, setDescriptionInput] = useState("");
@@ -26,6 +27,11 @@ const Applications = () => {
 
     const navigate = useNavigate();
 
+    const checkIfHardcodedPl = async () => {
+      const response = await axios.get("http://localhost:8080/api/auth/checkGroup", { params: { group: "hardcoded_pl" } });
+      setIsHardcodedPl(response.data.hasPermission);
+    };
+
     const retrieveApps = async () => {
         const response = await axios.get("http://localhost:8080/api/app/retrieveApps");
         const appsArray = response.data.apps.map(app => ({ ...app, app_startDate: dayjs(app.app_startDate), app_endDate: dayjs(app.app_endDate) }));
@@ -38,6 +44,7 @@ const Applications = () => {
     };
 
     useEffect(() => {
+        checkIfHardcodedPl();
         retrieveApps();
         retrieveGroups();
     }, []);
@@ -79,12 +86,7 @@ const Applications = () => {
             const response = await axios.post("http://localhost:8080/api/app/createApp", { app_acronym: acronymInput, app_rNumber: rNumberInput, app_description: descriptionInput, app_startDate: startDatePicker.toISOString().split("T")[0], app_endDate: endDatePicker.toISOString().split("T")[0], app_permitCreate: permitCreateSelect, app_permitOpen: permitOpenSelect, app_permitToDoList: permitToDoSelect, app_permitDoing: permitDoingSelect, app_permitDone: permitDoneSelect });
             navigate(0);
         } catch (error) {
-            if (error.response.status === 403) {
-                const response = await axios.get("http://localhost:8080/api/auth/logout");
-                navigate("/");
-            } else {
-                setErrorMessage(error.response.data.message);
-            }
+            setErrorMessage(error.response.data.message);
         }
     };
 
@@ -153,14 +155,13 @@ const Applications = () => {
             const response = await axios.put("http://localhost:8080/api/app/updateApp", app);
             navigate(0);
         } catch (error) {
-            if (error.response.status === 403) {
-                const response = await axios.get("http://localhost:8080/api/auth/logout");
-                navigate("/");
-            } else {
-                setErrorMessage(error.response.data.message);
-            }
+            setErrorMessage(error.response.data.message);
         }
     };
+
+    if (apps === undefined || groups === undefined) {
+        return null;
+    }
 
     return (
         <div style={{ paddingTop: 65 }}>
@@ -190,109 +191,111 @@ const Applications = () => {
                 </TableHead>
         
                 <TableBody>
-                    <TableRow>
-                        <TableCell><TextField value={acronymInput} onChange={(event) => CA_handleAcronymChange(event)} placeholder="Enter acronym" /></TableCell>
-                        <TableCell><TextField value={rNumberInput} onChange={(event) => CA_handleRNumberChange(event)} placeholder="Enter R. number" type="number" /></TableCell>
-                        <TableCell><TextField value={descriptionInput} onChange={(event) => CA_handleDescriptionChange(event)} placeholder="Enter description" /></TableCell>
-                        <TableCell>
-                            <LocalizationProvider dateAdapter={AdapterDayjs}>
-                                <DemoContainer components={["DatePicker"]}>
-                                    <DatePicker value={startDatePicker} onChange={(value) => setStartDatePicker(value)} />
-                                </DemoContainer>
-                            </LocalizationProvider>
-                        </TableCell>
-                        <TableCell>
-                            <LocalizationProvider dateAdapter={AdapterDayjs}>
-                                <DemoContainer components={["DatePicker"]}>
-                                    <DatePicker value={endDatePicker} onChange={(value) => setEndDatePicker(value)} />
-                                </DemoContainer>
-                            </LocalizationProvider>
-                        </TableCell>
-                        <TableCell>
-                            <Select
-                                value={permitCreateSelect}
-                                onChange={(event) => CA_handlePermitCreateChange(event)}
-                                sx={{ width: "150px" }}
-                            >
-                                {groups.map((group) => (
-                                    <MenuItem key={group} value={group}>
-                                        <ListItemText primary={group} />
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </TableCell>
-                        <TableCell>
-                            <Select
-                                value={permitOpenSelect}
-                                onChange={(event) => CA_handlePermitOpenChange(event)}
-                                sx={{ width: "150px" }}
-                            >
-                                {groups.map((group) => (
-                                    <MenuItem key={group} value={group}>
-                                        <ListItemText primary={group} />
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </TableCell>
-                        <TableCell>
-                            <Select
-                                value={permitToDoSelect}
-                                onChange={(event) => CA_handlePermitToDoChange(event)}
-                                sx={{ width: "150px" }}
-                            >
-                                {groups.map((group) => (
-                                    <MenuItem key={group} value={group}>
-                                        <ListItemText primary={group} />
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </TableCell>
-                        <TableCell>
-                            <Select
-                                value={permitDoingSelect}
-                                onChange={(event) => CA_handlePermitDoingChange(event)}
-                                sx={{ width: "150px" }}
-                            >
-                                {groups.map((group) => (
-                                    <MenuItem key={group} value={group}>
-                                        <ListItemText primary={group} />
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </TableCell>
-                        <TableCell>
-                            <Select
-                                value={permitDoneSelect}
-                                onChange={(event) => CA_handlePermitDoneChange(event)}
-                                sx={{ width: "150px" }}
-                            >
-                                {groups.map((group) => (
-                                    <MenuItem key={group} value={group}>
-                                        <ListItemText primary={group} />
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </TableCell>
-                        <TableCell><Button onClick={() => createApp()}>Create</Button></TableCell>
-                    </TableRow>
+                    {isHardcodedPl &&
+                        <TableRow>
+                            <TableCell><TextField value={acronymInput} onChange={(event) => CA_handleAcronymChange(event)} placeholder="Enter acronym" /></TableCell>
+                            <TableCell><TextField value={rNumberInput} onChange={(event) => CA_handleRNumberChange(event)} placeholder="Enter R. number" type="number" /></TableCell>
+                            <TableCell><TextField value={descriptionInput} onChange={(event) => CA_handleDescriptionChange(event)} placeholder="Enter description" sx={{ width: "150px" }} /></TableCell>
+                            <TableCell>
+                                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                                    <DemoContainer components={["DatePicker"]}>
+                                        <DatePicker value={startDatePicker} onChange={(value) => setStartDatePicker(value)} />
+                                    </DemoContainer>
+                                </LocalizationProvider>
+                            </TableCell>
+                            <TableCell>
+                                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                                    <DemoContainer components={["DatePicker"]}>
+                                        <DatePicker value={endDatePicker} onChange={(value) => setEndDatePicker(value)} />
+                                    </DemoContainer>
+                                </LocalizationProvider>
+                            </TableCell>
+                            <TableCell>
+                                <Select
+                                    value={permitCreateSelect}
+                                    onChange={(event) => CA_handlePermitCreateChange(event)}
+                                    sx={{ width: "150px" }}
+                                >
+                                    {groups.map((group) => (
+                                        <MenuItem key={group} value={group}>
+                                            <ListItemText primary={group} />
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </TableCell>
+                            <TableCell>
+                                <Select
+                                    value={permitOpenSelect}
+                                    onChange={(event) => CA_handlePermitOpenChange(event)}
+                                    sx={{ width: "150px" }}
+                                >
+                                    {groups.map((group) => (
+                                        <MenuItem key={group} value={group}>
+                                            <ListItemText primary={group} />
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </TableCell>
+                            <TableCell>
+                                <Select
+                                    value={permitToDoSelect}
+                                    onChange={(event) => CA_handlePermitToDoChange(event)}
+                                    sx={{ width: "150px" }}
+                                >
+                                    {groups.map((group) => (
+                                        <MenuItem key={group} value={group}>
+                                            <ListItemText primary={group} />
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </TableCell>
+                            <TableCell>
+                                <Select
+                                    value={permitDoingSelect}
+                                    onChange={(event) => CA_handlePermitDoingChange(event)}
+                                    sx={{ width: "150px" }}
+                                >
+                                    {groups.map((group) => (
+                                        <MenuItem key={group} value={group}>
+                                            <ListItemText primary={group} />
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </TableCell>
+                            <TableCell>
+                                <Select
+                                    value={permitDoneSelect}
+                                    onChange={(event) => CA_handlePermitDoneChange(event)}
+                                    sx={{ width: "150px" }}
+                                >
+                                    {groups.map((group) => (
+                                        <MenuItem key={group} value={group}>
+                                            <ListItemText primary={group} />
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </TableCell>
+                            <TableCell><Button onClick={() => createApp()}>Create</Button></TableCell>
+                        </TableRow>
+                    }
                     
                     {apps.map((app, index) => {
                         return (
                             <TableRow key={index}>
                                 <TableCell><NavLink to={`/applications/${app.app_acronym}`}>{app.app_acronym}</NavLink></TableCell>
                                 <TableCell>{app.app_rNumber}</TableCell>
-                                <TableCell><TextField value={app.app_description} onChange={(event) => UA_handleDescriptionChange(index, event)} placeholder="Enter description" /></TableCell>
+                                <TableCell><TextField value={app.app_description} onChange={(event) => UA_handleDescriptionChange(index, event)} placeholder="Enter description" sx={{ width: "150px" }} disabled={!isHardcodedPl} /></TableCell>
                                 <TableCell>
                                     <LocalizationProvider dateAdapter={AdapterDayjs}>
                                         <DemoContainer components={["DatePicker"]}>
-                                            <DatePicker value={app.app_startDate} onChange={(value) => UA_handleStartDateChange(index, value)} />
+                                            <DatePicker value={app.app_startDate} onChange={(value) => UA_handleStartDateChange(index, value)} disabled={!isHardcodedPl} />
                                         </DemoContainer>
                                     </LocalizationProvider>
                                 </TableCell>
                                 <TableCell>
                                     <LocalizationProvider dateAdapter={AdapterDayjs}>
                                         <DemoContainer components={["DatePicker"]}>
-                                            <DatePicker value={app.app_endDate} onChange={(value) => UA_handleEndDateChange(index, value)} />
+                                            <DatePicker value={app.app_endDate} onChange={(value) => UA_handleEndDateChange(index, value)} disabled={!isHardcodedPl} />
                                         </DemoContainer>
                                     </LocalizationProvider>
                                 </TableCell>
@@ -301,6 +304,7 @@ const Applications = () => {
                                         value={app.app_permitCreate}
                                         onChange={(event) => UA_handlePermitCreateChange(index, event)}
                                         sx={{ width: "150px" }}
+                                        disabled={!isHardcodedPl}
                                     >
                                         {groups.map((group) => (
                                             <MenuItem key={group} value={group}>
@@ -314,6 +318,7 @@ const Applications = () => {
                                         value={app.app_permitOpen}
                                         onChange={(event) => UA_handlePermitOpenChange(index, event)}
                                         sx={{ width: "150px" }}
+                                        disabled={!isHardcodedPl}
                                     >
                                         {groups.map((group) => (
                                             <MenuItem key={group} value={group}>
@@ -327,6 +332,7 @@ const Applications = () => {
                                         value={app.app_permitToDoList}
                                         onChange={(event) => UA_handlePermitToDoChange(index, event)}
                                         sx={{ width: "150px" }}
+                                        disabled={!isHardcodedPl}
                                     >
                                         {groups.map((group) => (
                                             <MenuItem key={group} value={group}>
@@ -340,6 +346,7 @@ const Applications = () => {
                                         value={app.app_permitDoing}
                                         onChange={(event) => UA_handlePermitDoingChange(index, event)}
                                         sx={{ width: "150px" }}
+                                        disabled={!isHardcodedPl}
                                     >
                                         {groups.map((group) => (
                                             <MenuItem key={group} value={group}>
@@ -353,6 +360,7 @@ const Applications = () => {
                                         value={app.app_permitDone}
                                         onChange={(event) => UA_handlePermitDoneChange(index, event)}
                                         sx={{ width: "150px" }}
+                                        disabled={!isHardcodedPl}
                                     >
                                         {groups.map((group) => (
                                             <MenuItem key={group} value={group}>

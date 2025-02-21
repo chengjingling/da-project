@@ -11,8 +11,8 @@ const Header = () => {
   const navigate = useNavigate();
 
   const checkIfAdmin = async () => {
-    const response = await axios.get("http://localhost:8080/api/auth/checkIfAdmin");
-    setIsAdmin(response.data.isAdmin);
+    const response = await axios.get("http://localhost:8080/api/auth/checkGroup", { params: { group: "admin" } });
+    setIsAdmin(response.data.hasPermission);
     setUsername(response.data.username);
   };
 

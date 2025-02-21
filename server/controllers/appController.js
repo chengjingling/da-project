@@ -2,11 +2,15 @@ const connection = require("../config/database");
 const transporter = require("../config/mail");
 
 const retrieveApps = (req, res) => {
+    connection.beginTransaction();
+
     connection.query("SELECT * FROM applications", (err, apps) => {
         if (err) {
             console.error("Error selecting applications:", err);
+            connection.rollback();
             res.status(500).json({ message: "An error occurred, please try again." });
         } else {
+            connection.commit();
             res.status(200).json({ apps: apps });
         }
     });
@@ -29,8 +33,16 @@ const createApp = (req, res) => {
         return res.status(400).json({ message: "Acronym can only contain letters and numbers." });
     }
 
+    if (data.app_rNumber < 0) {
+        return res.status(400).json({ message: "R. number cannot be less than 0." });
+    }
+
+    connection.beginTransaction();
+
     connection.query("INSERT INTO applications SET ?", data, (err) => {
         if (err) {
+            connection.rollback();
+            
             if (err.code === "ER_DUP_ENTRY") {
                 res.status(409).json({ message: "Acronym already exists." });
             } else if (err.code === "ER_TRUNCATED_WRONG_VALUE_FOR_FIELD") {
@@ -40,6 +52,7 @@ const createApp = (req, res) => {
                 res.status(500).json({ message: "An error occurred, please try again." });
             }
         } else {
+            connection.commit();
             res.status(201).json({ message: "Application created." });
         }
     });
@@ -48,11 +61,15 @@ const createApp = (req, res) => {
 const updateApp = (req, res) => {
     const data = req.body;
 
+    connection.beginTransaction();
+
     connection.query("UPDATE applications SET app_description = ?, app_startDate = ?, app_endDate = ?, app_permitCreate = ?, app_permitOpen = ?, app_permitToDoList = ?, app_permitDoing = ?, app_permitDone = ? WHERE app_acronym = ?", [data.app_description, data.app_startDate, data.app_endDate, data.app_permitCreate, data.app_permitOpen, data.app_permitToDoList, data.app_permitDoing, data.app_permitDone, data.app_acronym], (err) => {
         if (err) {
             console.error("Error updating application:", err);
+            connection.rollback();
             res.status(500).json({ message: "An error occurred, please try again." });
         } else {
+            connection.commit();
             res.status(200).json({ message: "Application updated." });
         }
     });
@@ -61,11 +78,15 @@ const updateApp = (req, res) => {
 const retrievePlans = (req, res) => {
     const { appAcronym } = req.query;
     
+    connection.beginTransaction();
+
     connection.query("SELECT * FROM plans WHERE plan_appAcronym = ?", [appAcronym], (err, plans) => {
         if (err) {
             console.error("Error selecting plans:", err);
+            connection.rollback();
             res.status(500).json({ message: "An error occurred, please try again." });
         } else {
+            connection.commit();
             res.status(200).json({ plans: plans });
         }
     });
@@ -97,8 +118,12 @@ const createPlan = (req, res) => {
 
     data.plan_color = color;
 
+    connection.beginTransaction();
+
     connection.query("INSERT INTO plans SET ?", data, (err) => {
         if (err) {
+            connection.rollback();
+
             if (err.code === "ER_DUP_ENTRY") {
                 res.status(409).json({ message: "MVP name already exists." });
             } else {
@@ -106,6 +131,7 @@ const createPlan = (req, res) => {
                 res.status(500).json({ message: "An error occurred, please try again." });
             }
         } else {
+            connection.commit();
             res.status(201).json({ message: "Plan created." });
         }
     });
@@ -114,11 +140,15 @@ const createPlan = (req, res) => {
 const retrieveTasks = (req, res) => {
     const { appAcronym } = req.query;
     
+    connection.beginTransaction();
+
     connection.query("SELECT * FROM tasks WHERE task_appAcronym = ?", [appAcronym], (err, tasks) => {
         if (err) {
             console.error("Error selecting tasks:", err);
+            connection.rollback();
             res.status(500).json({ message: "An error occurred, please try again." });
         } else {
+            connection.commit();
             res.status(200).json({ tasks: tasks });
         }
     });
@@ -127,11 +157,15 @@ const retrieveTasks = (req, res) => {
 const retrieveTask = (req, res) => {
     const { taskId } = req.query;
     
+    connection.beginTransaction();
+
     connection.query("SELECT * FROM tasks WHERE task_id = ?", [taskId], (err, tasks) => {
         if (err) {
             console.error("Error selecting task:", err);
+            connection.rollback();
             res.status(500).json({ message: "An error occurred, please try again." });
         } else {
+            connection.commit();
             res.status(200).json({ task: tasks[0] });
         }
     });
@@ -139,6 +173,8 @@ const retrieveTask = (req, res) => {
 
 const createTask = async (req, res) => {
     const data = req.body;
+
+    const nameRegex = /^[a-zA-Z0-9 ]+$/;
     
     if (data.task_name === "") {
         return res.status(400).json({ message: "Name cannot be blank." });
@@ -148,15 +184,26 @@ const createTask = async (req, res) => {
         return res.status(400).json({ message: "Name cannot be more than 50 characters." });
     }
 
+    if (!nameRegex.test(data.task_name)) {
+        return res.status(400).json({ message: "Name can only contain letters, numbers and spaces." });
+    }
+
     try {
+        connection.beginTransaction();
+    
         const lastRNumberResult = await connection.promise().query(
-            "SELECT MAX(SUBSTRING(task_id, LENGTH(task_appAcronym) + 2)) AS lastRNumber FROM tasks"
+            "SELECT MAX(SUBSTRING(task_id, LENGTH(task_appAcronym) + 2)) AS lastRNumber FROM tasks WHERE task_appAcronym = ?",
+            [data.task_appAcronym]
         );
         
         const lastRNumber = lastRNumberResult[0][0].lastRNumber;
         
         if (lastRNumber) {
-            data.task_id = data.task_appAcronym + "_" + (parseInt(lastRNumber) + 1).toString();
+            if (lastRNumber === "2147483647") {
+                return res.status(400).json({ message: "R. number exceeded, cannot create any more tasks." });
+            } else {
+                data.task_id = data.task_appAcronym + "_" + (parseInt(lastRNumber) + 1).toString();
+            }
         } else {
             const appResult = await connection.promise().query(
                 "SELECT * FROM applications WHERE app_acronym = ?",
@@ -170,6 +217,7 @@ const createTask = async (req, res) => {
             delete data.task_plan;
         }
 
+        data.task_notes = "";
         data.task_state = "Open";
         data.task_creator = req.user.username;
         data.task_owner = req.user.username;
@@ -179,10 +227,80 @@ const createTask = async (req, res) => {
             "INSERT INTO tasks SET ?", 
             data
         );
-        
+
+        connection.commit();
         res.status(201).json({ message: "Task created." });
     } catch (err) {
         console.error("Error creating task:", err);
+        connection.rollback();
+        res.status(500).json({ message: "An error occurred, please try again." });
+    }
+};
+
+const updateTaskNotes = async (req, res) => {
+    const data = req.body;
+
+    try {
+        connection.beginTransaction();
+    
+        const [taskResults] = await connection.promise().query(
+            "SELECT * FROM tasks WHERE task_id = ?",
+            [data.task_id]
+        );
+
+        let notes = taskResults[0].task_notes;
+    
+        if (notes !== "") {
+            notes += ", ";
+        }
+
+        notes += `{"text": "${data.note}", "date_posted": "${new Date()}", "creator": "${req.user.username}", "type": "written"}`;
+
+        await connection.promise().query(
+            "UPDATE tasks SET task_notes = ?, task_owner = ? WHERE task_id = ?", 
+            [notes, req.user.username, data.task_id]
+        );
+
+        connection.commit();
+        res.status(200).json({ message: "Task notes updated." });
+    } catch (err) {
+        console.error("Error updating task notes:", err);
+        connection.rollback();
+        res.status(500).json({ message: "An error occurred, please try again." });
+    }
+};
+
+const updateTaskPlan = async (req, res) => {
+    const data = req.body;
+
+    try {
+        connection.beginTransaction();
+    
+        const [taskResults] = await connection.promise().query(
+            "SELECT * FROM tasks WHERE task_id = ?",
+            [data.task_id]
+        );
+
+        if (taskResults[0].task_plan !== data.task_plan) {
+            let notes = taskResults[0].task_notes;
+        
+            if (notes !== "") {
+                notes += ", ";
+            }
+
+            notes += `{"text": "Plan changed from ${taskResults[0].task_plan} to ${data.task_plan}", "date_posted": "${new Date()}", "creator": "~system~", "type": "system"}`;
+
+            await connection.promise().query(
+                "UPDATE tasks SET task_plan = ?, task_notes = ?, task_owner = ? WHERE task_id = ?", 
+                [data.task_plan, notes, req.user.username, data.task_id]
+            );
+        }
+
+        connection.commit();
+        res.status(200).json({ message: "Task plan updated." });
+    } catch (err) {
+        console.error("Error updating task plan:", err);
+        connection.rollback();
         res.status(500).json({ message: "An error occurred, please try again." });
     }
 };
@@ -217,6 +335,8 @@ const updateTaskState = async (req, res) => {
     }
 
     try {
+        connection.beginTransaction();
+    
         const [taskResults] = await connection.promise().query(
             "SELECT * FROM tasks WHERE task_id = ?",
             [data.task_id]
@@ -236,78 +356,38 @@ const updateTaskState = async (req, res) => {
             [notes, newState, req.user.username, data.task_id]
         );
 
-        // await transporter.sendMail({
-        //     from: '"Cheng Jingling" <chengjingling@gmail.com>',
-        //     to: "jinging1807@gmail.com",
-        //     subject: `${oldState} >> ${newState} (${message})`,
-        //     html: `<p>${oldState} >> ${newState} (${message})</p>`,
-        // });
+        if (data.buttonPressed === "Seek approval" || data.buttonPressed === "Request for deadline extension") {
+            const [appResults] = await connection.promise().query(
+                "SELECT * FROM applications WHERE app_acronym = ?",
+                [data.appAcronym]
+            );
 
+            const [userGroupsResults] = await connection.promise().query(
+                "SELECT * FROM user_group WHERE user_group_groupName = ?",
+                [appResults[0].app_permitDone]
+            );
+
+            const [usersResults] = await connection.promise().query(
+                `SELECT * FROM users WHERE user_username IN (${userGroupsResults.map(userGroup => "'" + userGroup.user_group_username + "'").join(", ")}) AND user_enabled = true`
+            );
+
+            const emailsString = usersResults.map(user => user.user_email).join(", ");
+
+            await transporter.sendMail({
+                from: '"Cheng Jingling" <chengjingling@gmail.com>',
+                to: emailsString,
+                subject: `${oldState} >> ${newState} (${message})`,
+                html: `<p>${oldState} >> ${newState} (${message})</p>`,
+            });
+        }
+
+        connection.commit();
         res.status(200).json({ message: "Task state updated." });
     } catch (err) {
         console.error("Error updating task state:", err);
+        connection.rollback();
         res.status(500).json({ message: "An error occurred, please try again." });
     }
 };
 
-const updateTaskPlan = async (req, res) => {
-    const data = req.body;
-
-    try {
-        const [taskResults] = await connection.promise().query(
-            "SELECT * FROM tasks WHERE task_id = ?",
-            [data.task_id]
-        );
-
-        if (taskResults[0].task_plan !== data.task_plan) {
-            let notes = taskResults[0].task_notes;
-        
-            if (notes !== "") {
-                notes += ", ";
-            }
-
-            notes += `{"text": "Plan changed from ${taskResults[0].task_plan} to ${data.task_plan}", "date_posted": "${new Date()}", "creator": "~system~", "type": "system"}`;
-
-            await connection.promise().query(
-                "UPDATE tasks SET task_plan = ?, task_notes = ?, task_owner = ? WHERE task_id = ?", 
-                [data.task_plan, notes, req.user.username, data.task_id]
-            );
-        }
-
-        res.status(200).json({ message: "Task plan updated." });
-    } catch (err) {
-        console.error("Error updating task plan:", err);
-        res.status(500).json({ message: "An error occurred, please try again." });
-    }
-};
-
-const updateTaskNotes = async (req, res) => {
-    const data = req.body;
-
-    try {
-        const [taskResults] = await connection.promise().query(
-            "SELECT * FROM tasks WHERE task_id = ?",
-            [data.task_id]
-        );
-
-        let notes = taskResults[0].task_notes;
-    
-        if (notes !== "") {
-            notes += ", ";
-        }
-
-        notes += `{"text": "${data.note}", "date_posted": "${new Date()}", "creator": "${req.user.username}", "type": "written"}`;
-
-        await connection.promise().query(
-            "UPDATE tasks SET task_notes = ?, task_owner = ? WHERE task_id = ?", 
-            [notes, req.user.username, data.task_id]
-        );
-
-        res.status(200).json({ message: "Task notes updated." });
-    } catch (err) {
-        console.error("Error updating task notes:", err);
-        res.status(500).json({ message: "An error occurred, please try again." });
-    }
-};
-
-module.exports = { retrieveApps, createApp, updateApp, retrievePlans, createPlan, retrieveTasks, retrieveTask, createTask, updateTaskState, updateTaskPlan, updateTaskNotes };
+module.exports = { retrieveApps, createApp, updateApp, retrievePlans, createPlan, retrieveTasks, retrieveTask, createTask, updateTaskNotes, updateTaskPlan, updateTaskState };

@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { retrieveApps, createApp, updateApp, retrievePlans, createPlan, retrieveTasks, retrieveTask, createTask, updateTaskState, updateTaskPlan, updateTaskNotes } = require("../controllers/appController");
+const { retrieveApps, createApp, updateApp, retrievePlans, createPlan, retrieveTasks, retrieveTask, createTask, updateTaskNotes, updateTaskPlan, updateTaskState } = require("../controllers/appController");
 const { validateToken } = require("../middleware/validateToken");
 const { i_checkGroup } = require("../middleware/checkGroup");
 const { checkPermit } = require("../middleware/checkPermit");
@@ -17,9 +17,9 @@ router.get("/retrievePlans", retrievePlans);
 router.post("/createPlan", checkIfHardcodedPm, createPlan);
 router.get("/retrieveTasks", retrieveTasks);
 router.get("/retrieveTask", retrieveTask);
-router.post("/createTask", checkIfHardcodedPl, createTask);
-router.patch("/updateTaskState", checkPermit, updateTaskState);
-router.patch("/updateTaskPlan", checkPermit, updateTaskPlan);
+router.post("/createTask", checkPermit, createTask);
 router.patch("/updateTaskNotes", checkPermit, updateTaskNotes);
+router.patch("/updateTaskPlan", checkPermit, updateTaskPlan);
+router.patch("/updateTaskState", checkPermit, updateTaskState);
 
 module.exports = router;
