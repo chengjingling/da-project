@@ -10,6 +10,7 @@ const ViewTask = () => {
     const [task, setTask] = useState({});
     const [plans, setPlans] = useState([]);
     const [planSelect, setPlanSelect] = useState("");
+    const [currentPlanSelect, setCurrentPlanSelect] = useState("");
     const [notes, setNotes] = useState("");
     const [noteInput, setNoteInput] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
@@ -53,6 +54,7 @@ const ViewTask = () => {
         setTask(taskObject);
         setPlans(plansArray);
         setPlanSelect(taskObject.task_plan);
+        setCurrentPlanSelect(taskObject.task_plan);
         setNotes(notesText);
     };
 
@@ -75,8 +77,8 @@ const ViewTask = () => {
                 const updateNotesResponse = await axios.patch("http://localhost:8080/api/app/updateTaskNotes", { task_id: taskId, note: noteInput, appAcronym: appAcronym });
             }
 
-            if (task.task_state === "Open" || task.task_state === "Done") {
-                const updatePlanResponse = await axios.patch("http://localhost:8080/api/app/updateTaskPlan", { task_id: taskId, task_plan: planSelect, appAcronym: appAcronym });
+            if (task.task_state === "Open" || (task.task_state === "Done" && buttonPressed === "Reject task")) {
+                const updatePlanResponse = await axios.patch("http://localhost:8080/api/app/updateTaskPlan", { task_id: taskId, task_plan: planSelect, buttonPressed: buttonPressed, appAcronym: appAcronym });
             }
 
             if (buttonPressed !== "Save changes") {
@@ -163,13 +165,15 @@ const ViewTask = () => {
                 {task.task_state === "Done" && permits.includes("Done") &&
                     <div>
                         <Button onClick={() => updateTask("Reject task")}>Reject task</Button>
-                        <Button onClick={() => updateTask("Approve task")}>Approve task</Button>
+                        <Button onClick={() => updateTask("Approve task")} disabled={planSelect !== currentPlanSelect}>Approve task</Button>
                     </div>
                 }
 
                 <Box sx={{ flexGrow: 1 }} />
 
-                <Button onClick={() => updateTask("Save changes")}>Save changes</Button>
+                {hasPermission &&
+                    <Button onClick={() => updateTask("Save changes")}>Save changes</Button>
+                }
             </div>
         </div>
     );

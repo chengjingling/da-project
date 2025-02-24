@@ -195,7 +195,7 @@ const Applications = () => {
                         <TableRow>
                             <TableCell><TextField value={acronymInput} onChange={(event) => CA_handleAcronymChange(event)} placeholder="Enter acronym" /></TableCell>
                             <TableCell><TextField value={rNumberInput} onChange={(event) => CA_handleRNumberChange(event)} placeholder="Enter R. number" type="number" /></TableCell>
-                            <TableCell><TextField value={descriptionInput} onChange={(event) => CA_handleDescriptionChange(event)} placeholder="Enter description" sx={{ width: "150px" }} /></TableCell>
+                            <TableCell><textarea value={descriptionInput} onChange={(event) => CA_handleDescriptionChange(event)} placeholder="Enter description" /></TableCell>
                             <TableCell>
                                 <LocalizationProvider dateAdapter={AdapterDayjs}>
                                     <DemoContainer components={["DatePicker"]}>
@@ -284,7 +284,7 @@ const Applications = () => {
                             <TableRow key={index}>
                                 <TableCell><NavLink to={`/applications/${app.app_acronym}`}>{app.app_acronym}</NavLink></TableCell>
                                 <TableCell>{app.app_rNumber}</TableCell>
-                                <TableCell><TextField value={app.app_description} onChange={(event) => UA_handleDescriptionChange(index, event)} placeholder="Enter description" sx={{ width: "150px" }} disabled={!isHardcodedPl} /></TableCell>
+                                <TableCell><textarea value={app.app_description} onChange={(event) => UA_handleDescriptionChange(index, event)} placeholder="Enter description" disabled={!isHardcodedPl} /></TableCell>
                                 <TableCell>
                                     <LocalizationProvider dateAdapter={AdapterDayjs}>
                                         <DemoContainer components={["DatePicker"]}>

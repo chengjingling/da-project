@@ -33,6 +33,14 @@ const createApp = (req, res) => {
         return res.status(400).json({ message: "Acronym can only contain letters and numbers." });
     }
 
+    if (data.app_rNumber === "") {
+        return res.status(400).json({ message: "R. number cannot be blank." });
+    }
+
+    if (!Number.isInteger(Number(data.app_rNumber))) {
+        return res.status(400).json({ message: "R. number must be an integer." });
+    }
+
     if (data.app_rNumber < 0) {
         return res.status(400).json({ message: "R. number cannot be less than 0." });
     }
@@ -45,8 +53,6 @@ const createApp = (req, res) => {
             
             if (err.code === "ER_DUP_ENTRY") {
                 res.status(409).json({ message: "Acronym already exists." });
-            } else if (err.code === "ER_TRUNCATED_WRONG_VALUE_FOR_FIELD") {
-                res.status(400).json({ message: "R. number must be an integer." });
             } else {
                 console.error("Error inserting application:", err);
                 res.status(500).json({ message: "An error occurred, please try again." });
@@ -243,26 +249,64 @@ const updateTaskNotes = async (req, res) => {
     try {
         connection.beginTransaction();
     
+        const [userGroupsResults] = await connection.promise().query(
+            "SELECT * FROM user_group WHERE user_group_username = ?", 
+            [req.user.username]
+        );
+        
+        const userGroups = userGroupsResults.map(group => group.user_group_groupName);
+
+        const [appPermitsResults] = await connection.promise().query(
+            "SELECT * FROM applications WHERE app_acronym = ?", 
+            [data.appAcronym]
+        );
+
+        const appPermits = {
+            "Create": appPermitsResults[0].app_permitCreate,
+            "Open": appPermitsResults[0].app_permitOpen,
+            "To-do": appPermitsResults[0].app_permitToDoList,
+            "Doing": appPermitsResults[0].app_permitDoing,
+            "Done": appPermitsResults[0].app_permitDone
+        };
+        
+        const permits = Object.entries(appPermits)
+            .filter(([key, value]) => userGroups.includes(value))
+            .map(([key, value]) => key);
+    
         const [taskResults] = await connection.promise().query(
             "SELECT * FROM tasks WHERE task_id = ?",
             [data.task_id]
         );
 
-        let notes = taskResults[0].task_notes;
-    
-        if (notes !== "") {
-            notes += ", ";
+        if (permits.includes(taskResults[0].task_state)) {
+            let notes = taskResults[0].task_notes;
+        
+            if (notes !== "") {
+                notes += ", ";
+            }
+
+            const obj = {
+                text: data.note,
+                date_posted: new Date(),
+                creator: req.user.username,
+                type: "written"
+            }
+
+            const objString = JSON.stringify(obj);
+
+            notes += objString;
+
+            await connection.promise().query(
+                "UPDATE tasks SET task_notes = ?, task_owner = ? WHERE task_id = ?", 
+                [notes, req.user.username, data.task_id]
+            );
+
+            connection.commit();
+            res.status(200).json({ message: "Task notes updated." });
+        } else {
+            connection.rollback();
+            res.status(403).json({ message: "You are not permitted to perform this action." });
         }
-
-        notes += `{"text": "${data.note}", "date_posted": "${new Date()}", "creator": "${req.user.username}", "type": "written"}`;
-
-        await connection.promise().query(
-            "UPDATE tasks SET task_notes = ?, task_owner = ? WHERE task_id = ?", 
-            [notes, req.user.username, data.task_id]
-        );
-
-        connection.commit();
-        res.status(200).json({ message: "Task notes updated." });
     } catch (err) {
         console.error("Error updating task notes:", err);
         connection.rollback();
@@ -276,28 +320,58 @@ const updateTaskPlan = async (req, res) => {
     try {
         connection.beginTransaction();
     
+        const [userGroupsResults] = await connection.promise().query(
+            "SELECT * FROM user_group WHERE user_group_username = ?", 
+            [req.user.username]
+        );
+        
+        const userGroups = userGroupsResults.map(group => group.user_group_groupName);
+
+        const [appPermitsResults] = await connection.promise().query(
+            "SELECT * FROM applications WHERE app_acronym = ?", 
+            [data.appAcronym]
+        );
+
+        const appPermits = {
+            "Create": appPermitsResults[0].app_permitCreate,
+            "Open": appPermitsResults[0].app_permitOpen,
+            "To-do": appPermitsResults[0].app_permitToDoList,
+            "Doing": appPermitsResults[0].app_permitDoing,
+            "Done": appPermitsResults[0].app_permitDone
+        };
+        
+        const permits = Object.entries(appPermits)
+            .filter(([key, value]) => userGroups.includes(value))
+            .map(([key, value]) => key);
+    
         const [taskResults] = await connection.promise().query(
             "SELECT * FROM tasks WHERE task_id = ?",
             [data.task_id]
         );
-
-        if (taskResults[0].task_plan !== data.task_plan) {
-            let notes = taskResults[0].task_notes;
         
-            if (notes !== "") {
-                notes += ", ";
+        if ((taskResults[0].task_state === "Open" && permits.includes("Open")) ||
+            (taskResults[0].task_state === "Done" && permits.includes("Done") && data.buttonPressed === "Reject task")) {
+            if (taskResults[0].task_plan !== data.task_plan) {
+                let notes = taskResults[0].task_notes;
+            
+                if (notes !== "") {
+                    notes += ", ";
+                }
+
+                notes += `{"text": "Plan changed from ${taskResults[0].task_plan} to ${data.task_plan}", "date_posted": "${new Date()}", "creator": "~system~", "type": "system"}`;
+
+                await connection.promise().query(
+                    "UPDATE tasks SET task_plan = ?, task_notes = ?, task_owner = ? WHERE task_id = ?", 
+                    [data.task_plan, notes, req.user.username, data.task_id]
+                );
             }
 
-            notes += `{"text": "Plan changed from ${taskResults[0].task_plan} to ${data.task_plan}", "date_posted": "${new Date()}", "creator": "~system~", "type": "system"}`;
-
-            await connection.promise().query(
-                "UPDATE tasks SET task_plan = ?, task_notes = ?, task_owner = ? WHERE task_id = ?", 
-                [data.task_plan, notes, req.user.username, data.task_id]
-            );
+            connection.commit();
+            res.status(200).json({ message: "Task plan updated." });
+        } else {
+            connection.rollback();
+            res.status(403).json({ message: "You are not permitted to perform this action." });
         }
-
-        connection.commit();
-        res.status(200).json({ message: "Task plan updated." });
     } catch (err) {
         console.error("Error updating task plan:", err);
         connection.rollback();
@@ -337,52 +411,83 @@ const updateTaskState = async (req, res) => {
     try {
         connection.beginTransaction();
     
+        const [userGroupsResults] = await connection.promise().query(
+            "SELECT * FROM user_group WHERE user_group_username = ?", 
+            [req.user.username]
+        );
+        
+        const userGroups = userGroupsResults.map(group => group.user_group_groupName);
+
+        const [appPermitsResults] = await connection.promise().query(
+            "SELECT * FROM applications WHERE app_acronym = ?", 
+            [data.appAcronym]
+        );
+
+        const appPermits = {
+            "Create": appPermitsResults[0].app_permitCreate,
+            "Open": appPermitsResults[0].app_permitOpen,
+            "To-do": appPermitsResults[0].app_permitToDoList,
+            "Doing": appPermitsResults[0].app_permitDoing,
+            "Done": appPermitsResults[0].app_permitDone
+        };
+        
+        const permits = Object.entries(appPermits)
+            .filter(([key, value]) => userGroups.includes(value))
+            .map(([key, value]) => key);
+    
         const [taskResults] = await connection.promise().query(
             "SELECT * FROM tasks WHERE task_id = ?",
             [data.task_id]
         );
 
-        let notes = taskResults[0].task_notes;
-        let oldState = taskResults[0].task_state;
-        
-        if (notes !== "") {
-            notes += ", ";
+        if (permits.includes(taskResults[0].task_state)) {
+            let notes = taskResults[0].task_notes;
+            let oldState = taskResults[0].task_state;
+            
+            if (notes !== "") {
+                notes += ", ";
+            }
+
+            notes += `{"text": "${oldState} >> ${newState} (${message})", "date_posted": "${new Date()}", "creator": "~system~", "type": "system"}`;
+
+            await connection.promise().query(
+                "UPDATE tasks SET task_notes = ?, task_state = ?, task_owner = ? WHERE task_id = ?", 
+                [notes, newState, req.user.username, data.task_id]
+            );
+
+            if (data.buttonPressed === "Seek approval" || data.buttonPressed === "Request for deadline extension") {
+                const [appResults] = await connection.promise().query(
+                    "SELECT * FROM applications WHERE app_acronym = ?",
+                    [data.appAcronym]
+                );
+
+                const [userGroupsResults] = await connection.promise().query(
+                    "SELECT * FROM user_group WHERE user_group_groupName = ?",
+                    [appResults[0].app_permitDone]
+                );
+
+                const [usersResults] = await connection.promise().query(
+                    `SELECT * FROM users WHERE user_username IN (${userGroupsResults.map(userGroup => "'" + userGroup.user_group_username + "'").join(", ")}) AND user_enabled = true`
+                );
+
+                const emailsString = usersResults.map(user => user.user_email).join(", ");
+                
+                if (emailsString !== "") {
+                    await transporter.sendMail({
+                        from: '"Cheng Jingling" <chengjingling@gmail.com>',
+                        to: emailsString,
+                        subject: `${data.task_id} in ${data.appAcronym} ready for review`,
+                        html: `<p>${data.task_id} in ${data.appAcronym} ready for review</p>`,
+                    });
+                }
+            }
+
+            connection.commit();
+            res.status(200).json({ message: "Task state updated." });
+        } else {
+            connection.rollback();
+            res.status(403).json({ message: "You are not permitted to perform this action." });
         }
-
-        notes += `{"text": "${oldState} >> ${newState} (${message})", "date_posted": "${new Date()}", "creator": "~system~", "type": "system"}`;
-
-        await connection.promise().query(
-            "UPDATE tasks SET task_notes = ?, task_state = ?, task_owner = ? WHERE task_id = ?", 
-            [notes, newState, req.user.username, data.task_id]
-        );
-
-        if (data.buttonPressed === "Seek approval" || data.buttonPressed === "Request for deadline extension") {
-            const [appResults] = await connection.promise().query(
-                "SELECT * FROM applications WHERE app_acronym = ?",
-                [data.appAcronym]
-            );
-
-            const [userGroupsResults] = await connection.promise().query(
-                "SELECT * FROM user_group WHERE user_group_groupName = ?",
-                [appResults[0].app_permitDone]
-            );
-
-            const [usersResults] = await connection.promise().query(
-                `SELECT * FROM users WHERE user_username IN (${userGroupsResults.map(userGroup => "'" + userGroup.user_group_username + "'").join(", ")}) AND user_enabled = true`
-            );
-
-            const emailsString = usersResults.map(user => user.user_email).join(", ");
-
-            await transporter.sendMail({
-                from: '"Cheng Jingling" <chengjingling@gmail.com>',
-                to: emailsString,
-                subject: `${oldState} >> ${newState} (${message})`,
-                html: `<p>${oldState} >> ${newState} (${message})</p>`,
-            });
-        }
-
-        connection.commit();
-        res.status(200).json({ message: "Task state updated." });
     } catch (err) {
         console.error("Error updating task state:", err);
         connection.rollback();
