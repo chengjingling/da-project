@@ -24,7 +24,7 @@ const checkAppPermit = async (username, state, appid) => {
         return permits.includes(state);
     } catch (err) {
         console.error("Error checking permits:", err);
-        res.status(500).json({ message: "An error occurred, please try again." });
+        throw err;
     }
 };
 
@@ -38,7 +38,7 @@ const checkCredentials = async (username, password) => {
         
         const user = users[0];
         const isMatch = await bcrypt.compare(password, user.user_password);
-        return isMatch;
+        return isMatch && user.user_enabled;
     } catch (err) {
         console.error("Error checking credentials:", err);
         throw err;
@@ -46,90 +46,82 @@ const checkCredentials = async (username, password) => {
 };
 
 const createTask = async (req, res) => {
+    if (Object.keys(req.query).length !== 0) {
+        return res.status(400).json({ code: "E1002" });
+    }
+
     try {
         connection.beginTransaction();
         
         const { task_app_acronym, task_name, task_description, task_plan, username, password } = req.body;
 
-        // PAYLOAD ERRORS 
-
-        if (!task_app_acronym || typeof task_app_acronym !== 'string') {
-            connection.rollback();
-            return res.status(400).json({ message: 'Invalid or missing task application acronym' });
-        }
-
-        if (!task_name || typeof task_name !== 'string') {
-            connection.rollback();
-            return res.status(400).json({ message: 'Invalid or missing task name' });
-        }
-
-        if (task_plan && typeof task_plan !== 'string') {
-            connection.rollback();
-            return res.status(400).json({ message: 'Invalid task plan' });
-        }
-
-        if (task_description && typeof task_description !== 'string') {
-            connection.rollback();
-            return res.status(400).json({ message: 'Invalid task description' });
-        }
-
         const nameRegex = /^[a-zA-Z0-9 ]{1,50}$/;
-        const planRegex = /^[a-zA-Z0-9_ -]{1,50}$/;
+
+        if (!username || typeof username !== "string") {
+            connection.rollback();
+            return res.status(400).json({ code: "E2001" });
+        }
+
+        if (!password || typeof password !== "string") {
+            connection.rollback();
+            return res.status(400).json({ code: "E2002" });
+        }
+
+        if (!task_name || typeof task_name !== "string") {
+            connection.rollback();
+            return res.status(400).json({ code: "E2003" });
+        }
 
         if (!nameRegex.test(task_name)) {
             connection.rollback();
-            return res.status(400).json({ message: 'Invalid task name format' });
+            return res.status(400).json({ code: "E2003" });
         }
 
-        if (task_plan && !planRegex.test(task_plan)) {
+        if (!task_app_acronym || typeof task_app_acronym !== "string") {
             connection.rollback();
-            return res.status(400).json({ message: 'Invalid task plan format' });
+            return res.status(400).json({ code: "E2004" });
+        }
+
+        if (task_plan && typeof task_plan !== "string") {
+            connection.rollback();
+            return res.status(400).json({ code: "E2005" });
+        }
+
+        if (task_description && typeof task_description !== "string") {
+            connection.rollback();
+            return res.status(400).json({ code: "E2006" });
         }
 
         if (task_description && task_description.length > 65535) {
             connection.rollback();
-            return res.status(400).json({ message: 'Task description too long' });
+            return res.status(400).json({ code: "E2006" });
         }
 
-        if (!username || typeof username !== 'string') {
+        const validCredentials = await checkCredentials(username, password);
+
+        if (!validCredentials) {
             connection.rollback();
-            return res.status(400).json({ message: 'Invalid or missing username' });
+            return res.status(400).json({ code: "E3001" });
         }
-
-        if (!password || typeof password !== 'string') {
-            connection.rollback();
-            return res.status(400).json({ message: 'Invalid or missing password' });
-        }
-
-        // IAM ERRORS
-
-        const isMatch = await checkCredentials(username, password);
-
-        if (!isMatch) {
-            connection.rollback();
-            return res.status(401).json({ message: 'Invalid credentials' });
-        }
-
-        if (!(await checkAppPermit(username, "CREATE", task_app_acronym))) {
-            connection.rollback();
-            return res.status(403).json({ message: "Forbidden: No Create Permission" });
-        }
-
-        // TRANSACTION ERRORS
 
         const [app_r_number] = await connection.promise().query("SELECT app_rNumber FROM applications WHERE app_acronym = ?", [task_app_acronym]);
 
         if (app_r_number.length === 0) {
             connection.rollback();
-            return res.status(400).json({ message: "Application not found" });
-        }        
+            return res.status(400).json({ code: "E3002" });
+        }
+
+        if (!(await checkAppPermit(username, "CREATE", task_app_acronym))) {
+            connection.rollback();
+            return res.status(400).json({ code: "E3002" });
+        }    
         
         if (task_plan) {
             const [plan] = await connection.promise().query("SELECT * FROM plans WHERE plan_mvpName = ? AND plan_appAcronym = ?", [task_plan, task_app_acronym]);
 
             if (plan.length === 0) {
                 connection.rollback();
-                return res.status(400).json({ message: "Task plan not found" });
+                return res.status(400).json({ code: "E4001" });
             }
         }
 
@@ -137,140 +129,172 @@ const createTask = async (req, res) => {
 
         if (app_r_number_value === 2147483647) {
             connection.rollback();
-            return res.status(400).json({ message: "Max App_Rnumber reached" });
+            return res.status(400).json({ code: "E4003" });
         }
 
         const task_id = `${task_app_acronym}_${app_r_number_value}`;
+
+        const auditObject = {
+            text: "Created task",
+            date_posted: new Date(),
+            creator: "~system~",
+            type: "system",
+            state: "Open"
+        };
+
+        const auditString = JSON.stringify(auditObject);
 
         const task_creator = username;
         const task_createDate = new Date();
         const task_state = "OPEN";
 
-        await connection.promise().query("INSERT INTO tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [task_id, task_app_acronym, task_plan || null, task_name, task_description || null, "", task_state, task_creator, task_creator, task_createDate]);
+        await connection.promise().query("INSERT INTO tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [task_id, task_app_acronym, task_plan || null, task_name, task_description || null, auditString, task_state, task_creator, task_creator, task_createDate]);
 
         const new_r_number = app_r_number_value + 1;
         await connection.promise().query("UPDATE applications SET app_rNumber = ? WHERE app_acronym = ?", [new_r_number, task_app_acronym]);
 
         connection.commit();
-        res.json({ message: "Task created successfully" });
+        res.status(200).json({ code: "S0001", task_id: task_id });
     } catch (err) {
         connection.rollback();
         console.error("Error creating task:", err);
-        res.status(500).json({ message: "Internal server error", error: err });
+        res.status(400).json({ code: "E5001" });
     }
 };
 
 const getTaskbyState = async (req, res) => {
+    if (Object.keys(req.query).length !== 0) {
+        return res.status(400).json({ code: "E1002" });
+    }
+
     try {
-        const { username, password, task_app_acronym, state } = req.body;
+        const { username, password, task_app_acronym, task_state } = req.body;
 
-        if (!state || typeof state !== 'string' || !['OPEN', 'TODO', 'DOING', 'DONE', 'CLOSED'].includes(state.toUpperCase())) {
-            return res.status(400).json({ message: 'Invalid or missing task state' });
+        if (!username || typeof username !== "string") {
+            return res.status(400).json({ code: "E2001" });
         }
 
-        if (!task_app_acronym || typeof task_app_acronym !== 'string') {
-            return res.status(400).json({ message: 'Invalid or missing task application acronym' });
+        if (!password || typeof password !== "string") {
+            return res.status(400).json({ code: "E2002" });
         }
 
-        if (!username || typeof username !== 'string') {
-            return res.status(400).json({ message: 'Invalid or missing username' });
+        if (!task_app_acronym || typeof task_app_acronym !== "string") {
+            return res.status(400).json({ code: "E2004" });
         }
 
-        if (!password || typeof password !== 'string') {
-            return res.status(400).json({ message: 'Invalid or missing password' });
+        if (!task_state || typeof task_state !== "string" || !["OPEN", "TODO", "DOING", "DONE", "CLOSED"].includes(task_state.toUpperCase())) {
+            return res.status(400).json({ code: "E2008" });
         }
 
-        const isMatch = await checkCredentials(username, password);
+        const validCredentials = await checkCredentials(username, password);
 
-        if (!isMatch) {
-            return res.status(401).json({ message: 'Invalid credentials' });
+        if (!validCredentials) {
+            return res.status(400).json({ code: "E3001" });
+        }
+
+        let state = task_state;
+
+        if (state.toUpperCase() === "TODO") {
+            state = "To-do";
         }
 
         const [tasks] = await connection.promise().query("SELECT * FROM tasks WHERE task_state = ? AND task_appAcronym = ?", [state, task_app_acronym]);
-        
-        res.json(tasks);
+
+        res.status(200).json({ code: "S0001", tasks: tasks });
     } catch (err) {
         console.error("Error getting tasks by state:", err);
-        res.status(500).json({ message: "Internal server error", error: err });
+        res.status(400).json({ code: "E5001" });
     } 
 };
 
 const promoteTask2Done = async (req, res) => {
+    if (Object.keys(req.query).length !== 0) {
+        return res.status(400).json({ code: "E1002" });
+    }
+
     try {
         connection.beginTransaction();
 
-        const { username, password, task_id, notes } = req.body;
+        const { username, password, task_id, task_notes } = req.body;
 
-        if (!task_id || typeof task_id !== 'string') {
+        if (!username || typeof username !== "string") {
             connection.rollback();
-            return res.status(400).json({ message: 'Invalid or missing task id' });
+            return res.status(400).json({ code: "E2001" });
         }
 
-        if (notes && typeof notes !== 'string') {
+        if (!password || typeof password !== "string") {
             connection.rollback();
-            return res.status(400).json({ message: 'Invalid notes' });
+            return res.status(400).json({ code: "E2002" });
         }
 
-        if (notes && notes.length > 65535) {
+        if (!task_id || typeof task_id !== "string") {
             connection.rollback();
-            return res.status(400).json({ message: 'Notes too long' });
+            return res.status(400).json({ code: "E2007" });
         }
 
-        if (!username || typeof username !== 'string') {
+        if (task_notes && typeof task_notes !== "string") {
             connection.rollback();
-            return res.status(400).json({ message: 'Invalid or missing username' });
+            return res.status(400).json({ code: "E2009" });
         }
 
-        if (!password || typeof password !== 'string') {
-            connection.rollback();
-            return res.status(400).json({ message: 'Invalid or missing password' });
-        }
-        
-        const isMatch = await checkCredentials(username, password);
+        const validCredentials = await checkCredentials(username, password);
 
-        if (!isMatch) {
+        if (!validCredentials) {
             connection.rollback();
-            return res.status(401).json({ message: 'Invalid credentials' });
+            return res.status(400).json({ code: "E3001" });
         }
 
         const [task] = await connection.promise().query("SELECT * FROM tasks WHERE task_id = ?", [task_id]);
 
         if (task.length === 0) {
             connection.rollback();
-            return res.status(400).json({ message: "Task not found" });
-        }
-
-        const task_state = task[0].task_state;
-
-        if (task_state !== "DOING") {
-            connection.rollback();
-            return res.status(400).json({ message: "Task not in DOING state" });
-        }
-
-        let allNotes = task[0].task_notes;
-        
-        if (notes !== "") {
-            if (allNotes !== "") {
-                allNotes += ", ";
-            }
-
-            const obj = {
-                text: notes,
-                date_posted: new Date(),
-                creator: username,
-                type: "written"
-            }
-
-            const objString = JSON.stringify(obj);
-
-            allNotes += objString;
+            return res.status(400).json({ code: "E3002" });
         }
 
         const task_app_acronym = task[0].task_appAcronym;
 
-        if (!(await checkAppPermit(username, "DONE", task_app_acronym))) {
+        if (!(await checkAppPermit(username, "DOING", task_app_acronym))) {
             connection.rollback();
-            return res.status(403).json({ message: "Forbidden" });
+            return res.status(400).json({ code: "E3002" });
+        }
+
+        const task_state = task[0].task_state;
+
+        if (task_state !== "Doing") {
+            connection.rollback();
+            return res.status(400).json({ code: "E4002" });
+        }
+
+        let allNotes = task[0].task_notes;
+        
+        if (task_notes !== "") {
+            const notesObject = {
+                text: task_notes,
+                date_posted: new Date(),
+                creator: username,
+                type: "written",
+                state: "Doing"
+            };
+
+            const notesString = JSON.stringify(notesObject);
+
+            allNotes += ", " + notesString;
+        }
+
+        const auditObject = {
+            text: "Doing >> Done",
+            date_posted: new Date(),
+            creator: "~system~",
+            type: "system",
+            state: "Doing"
+        };
+
+        const auditString = JSON.stringify(auditObject);
+
+        allNotes += ", " + auditString;
+
+        if (allNotes.length > 4294967295) {
+            return res.status(400).json({ code: "E4004" });
         }
 
         await connection.promise().query("UPDATE tasks SET task_state = 'DONE', task_notes = ? WHERE task_id = ?", [allNotes, task_id]);
@@ -284,7 +308,7 @@ const promoteTask2Done = async (req, res) => {
         const emailsString = usersResults.map(user => user.user_email).join(", ");
         
         if (emailsString !== "") {
-            await transporter.sendMail({
+            transporter.sendMail({
                 from: '"Cheng Jingling" <chengjingling@gmail.com>',
                 to: emailsString,
                 subject: `${task_id} in ${task_app_acronym} ready for review`,
@@ -293,11 +317,11 @@ const promoteTask2Done = async (req, res) => {
         }
 
         connection.commit();
-        res.json({ message: "Task promoted to DONE state" });
+        res.status(200).json({ code: "S0001" });
     } catch (err) {
         connection.rollback();
         console.error("Error promoting task to DONE:", err);
-        res.status(500).json({ message: "Internal server error", error: err });
+        res.status(400).json({ code: "E5001" });
     }
 };
 
