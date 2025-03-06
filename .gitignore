@@ -1,7 +1,10 @@
 client/node_modules/
+
 server/node_modules/
 server/.env
+
 assignment-3-server/node_modules/
 assignment-3-server/.env
-assignment-3-server/docker.env
+
 dev_test/pack/node_modules/
+dev_test/docker.env
