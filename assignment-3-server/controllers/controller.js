@@ -307,12 +307,19 @@ const promoteTask2Done = async (req, res) => {
 
         const emailsString = usersResults.map(user => user.user_email).join(", ");
         
+        let message = {
+            from: '"Cheng Jingling" <chengjingling@gmail.com>',
+            to: emailsString,
+            subject: `${task_id} in ${task_app_acronym} ready for review`,
+            html: `<p>${task_id} in ${task_app_acronym} ready for review</p>`,
+        };
+
         if (emailsString !== "") {
-            transporter.sendMail({
-                from: '"Cheng Jingling" <chengjingling@gmail.com>',
-                to: emailsString,
-                subject: `${task_id} in ${task_app_acronym} ready for review`,
-                html: `<p>${task_id} in ${task_app_acronym} ready for review</p>`,
+            transporter.sendMail(message, (error, info) => {
+                if (error) {
+                    console.error("Error sending email:", error);
+                    return null;
+                }
             });
         }
 
