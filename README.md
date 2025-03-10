@@ -12,20 +12,18 @@ The application consists of 3 main pages:
 
 ## Role-based access control
 
-There are 3 roles in this system: **project lead (PL)**, **project manager (PM)** and **developer (Dev)**.
-
 There are 5 permissions for each application: **Create**, **Open**, **To-do**, **Doing**, **Done**.
 
-Each permission is given to one of the roles, which allows them to manage tasks at different states:
+Each permission is granted to one user group, giving all users in that user group permission to perform a set of actions when a task is at that state.
 
-| **Permission** | **Role** | **Privileges**                                                      |
-| -------------- | -------- | ------------------------------------------------------------------- |
-| Create         | PL       | Create task                                                         |
-| Open           | PM       | Release task                                                        |
-| To-do          | Dev      | Work on task                                                        |
-| Doing          | Dev      | Return task to to-do, Seek approval, Request for deadline extension |
-| Done           | PL       | Approve task, Reject task                                           |
+| **Permission** | **Actions**                                                         |
+| -------------- | ------------------------------------------------------------------- |
+| Create         | Create task                                                         |
+| Open           | Release task                                                        |
+| To-do          | Work on task                                                        |
+| Doing          | Return task to to-do, Seek approval, Request for deadline extension |
+| Done           | Approve task, Reject task                                           |
 
-## Microservices + Docker
+## Microservices + Containerisation
 
-Some key functions of the application were transformed into microservices for independent scaling and maintenance. These microservices were then containerised using Docker to simulate environment consistency from development to production.
+Some key functions of the application were transformed into microservices using REST APIs. These microservices were then containerised using Docker to simulate the deployment process from development to production.
